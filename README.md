@@ -2,7 +2,7 @@
 
 > **只需把这个仓库丢给 AI Agent，它就能帮你完成安装。**
 >
-> Agent 执行 `Claude中文语言包.bat` 选择「完整安装」即可。
+> Agent 执行 `ClaudeChineseLangPack.bat` 选择「完整安装」即可。
 
 为 Claude Desktop (Windows) 提供完整的简体中文界面翻译。
 
@@ -16,7 +16,7 @@
 
 ## 使用方法
 
-双击 `Claude中文语言包.bat`，按提示选择：
+双击 `ClaudeChineseLangPack.bat`，按提示选择：
 
 ```
 1. 完整安装（翻译 + 界面补丁）  ← 推荐
@@ -65,7 +65,7 @@ Claude Desktop 的 JS 中有一部分 UI 字符串绕过了 i18n 系统（如 "N
 ## 目录结构
 
 ```
-├── Claude中文语言包.bat              # 统一入口（菜单选择）
+├── ClaudeChineseLangPack.bat         # 统一入口（菜单选择）
 ├── LanguagePack.ps1                  # 安装/卸载主脚本
 ├── patch-hardcoded-strings.js        # 修补 JS 中硬编码英文
 ├── restore-hardcoded-strings.js      # 还原 JS 补丁
