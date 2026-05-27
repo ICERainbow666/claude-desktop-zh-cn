@@ -1,26 +1,25 @@
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
-const jsPath = 'C:/Program Files/WindowsApps/Claude_1.8555.2.0_x64__pzs8sxrjxfjjc/app/resources/ion-dist/assets/v1/index-DuIwZ1hn.js';
-
-// Find the actual JS file (version may change)
 function findJsFile() {
   const base = 'C:/Program Files/WindowsApps/';
-  const dirs = fs.readdirSync(base).filter(d => d.startsWith('Claude_'));
+  if (!fs.existsSync(base)) return null;
+  const dirs = fs.readdirSync(base)
+    .filter(d => d.startsWith('Claude_'))
+    .sort()
+    .reverse(); // latest version first
   for (const dir of dirs) {
     const p = path.join(base, dir, 'app/resources/ion-dist/assets/v1/');
     if (fs.existsSync(p)) {
-      const files = fs.readdirSync(p).filter(f => f.startsWith('index-') && f.endsWith('.js'));
+      const files = fs.readdirSync(p).filter(f => f.startsWith('index-') && f.endsWith('.js') && !f.endsWith('.bak'));
       if (files.length > 0) return path.join(p, files[0]);
     }
   }
   return null;
 }
 
-const actualPath = findJsFile() || jsPath;
-
-if (!fs.existsSync(actualPath)) {
+const actualPath = findJsFile();
+if (!actualPath) {
   console.error('找不到 ion-dist JS 文件，请确认 Claude Desktop 已安装');
   process.exit(1);
 }
@@ -39,7 +38,6 @@ if (!fs.existsSync(backupPath)) {
 let content = fs.readFileSync(actualPath, 'utf-8');
 const before = content.length;
 
-// UI replacements
 const uiReplacements = {
   'New session': '新建会话',
   'New chat': '新对话',

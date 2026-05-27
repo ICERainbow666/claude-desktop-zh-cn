@@ -4,11 +4,14 @@ const path = require('path');
 function findJsFile() {
   const base = 'C:/Program Files/WindowsApps/';
   if (!fs.existsSync(base)) return null;
-  const dirs = fs.readdirSync(base).filter(d => d.startsWith('Claude_'));
+  const dirs = fs.readdirSync(base)
+    .filter(d => d.startsWith('Claude_'))
+    .sort()
+    .reverse(); // latest version first
   for (const dir of dirs) {
     const p = path.join(base, dir, 'app/resources/ion-dist/assets/v1/');
     if (fs.existsSync(p)) {
-      const files = fs.readdirSync(p).filter(f => f.startsWith('index-') && f.endsWith('.js'));
+      const files = fs.readdirSync(p).filter(f => f.startsWith('index-') && f.endsWith('.js') && !f.endsWith('.bak'));
       if (files.length > 0) return path.join(p, files[0]);
     }
   }
