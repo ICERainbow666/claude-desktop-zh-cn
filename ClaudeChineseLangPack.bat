@@ -50,6 +50,11 @@ echo [*] Starting Claude Desktop...
 echo [*] Claude Desktop started.
 goto :eof
 
+:CHECK_JS_PATCHED
+set "JS_PATCHED=0"
+for /f "delims=" %%f in ('dir /s /b "C:\Program Files\WindowsApps\Claude_*\app\resources\ion-dist\assets\v1\*.bak" 2^>nul') do set "JS_PATCHED=1"
+goto :eof
+
 :FULL_INSTALL
 echo.
 echo === Step 0/3: Closing Claude Desktop ===
@@ -87,6 +92,16 @@ timeout /t 3 /nobreak >nul
 goto MENU
 
 :UNINSTALL
+call :CHECK_JS_PATCHED
+if "%JS_PATCHED%"=="1" (
+    echo.
+    echo [!] You used option 1 which modified the JS file.
+    echo [!] Option 3 can only uninstall the language pack, but cannot restore the JS file.
+    echo [!] Please use option 4 to fully restore everything.
+    echo.
+    pause
+    goto MENU
+)
 echo.
 echo === Step 0/2: Closing Claude Desktop ===
 call :KILL_CLAUDE
@@ -103,6 +118,7 @@ timeout /t 3 /nobreak >nul
 goto MENU
 
 :RESTORE_ALL
+call :CHECK_JS_PATCHED
 echo.
 echo === Step 0/3: Closing Claude Desktop ===
 call :KILL_CLAUDE
@@ -111,9 +127,13 @@ echo === Step 1/3: Uninstalling language pack ===
 "%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%PS_SCRIPT%" -Uninstall -NoRestart
 if errorlevel 1 (echo [ERROR] Failed & pause & goto MENU)
 echo.
-echo === Step 2/3: Restoring JS patch ===
-node "%RESTORE_SCRIPT%"
-if errorlevel 1 (echo [WARN] Restore failed & pause & goto MENU)
+if "%JS_PATCHED%"=="1" (
+    echo === Step 2/3: Restoring JS patch ===
+    node "%RESTORE_SCRIPT%"
+    if errorlevel 1 (echo [WARN] Restore failed & pause & goto MENU)
+) else (
+    echo === Step 2/3: No hardcoded UI text patch found, skipping ===
+)
 echo.
 echo === Step 3/3: Starting Claude Desktop ===
 call :START_CLAUDE
