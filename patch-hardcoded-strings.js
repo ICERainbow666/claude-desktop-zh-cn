@@ -57,23 +57,9 @@ const uiReplacements = {
   'Set up manually': '手动设置',
   'Sign in': '登录',
   'Try again': '重试',
-  'Refresh': '刷新',
   'Filter scheduled tasks': '筛选计划任务',
-  'Active': '活跃',
-  'Draft': '草稿',
-  'Free': '免费',
-  'Owner': '所有者',
-  'Admin': '管理员',
   'Primary Owner': '主要所有者',
-  'User': '用户',
-  'Request': '请求',
-  'Dispatch': '分派',
-  'Chats': '聊天',
-  'Code': '代码',
-  'Files': '文件',
-  'Tasks': '任务',
   'Scheduled tasks': '计划任务',
-  'Cowork': '协作',
   'Claude will return soon': 'Claude 即将返回',
   'Connecting to live monitor': '正在连接实时监控',
   'Placing call': '正在拨打电话',
@@ -113,16 +99,27 @@ const uiReplacements = {
   'Pitch Deck': '路演演示',
   'Item Completion': '项目完成',
   'Weekly Metrics Review': '每周指标回顾',
+  'No tasks yet.': '暂无任务。',
+  'No active tasks.': '没有活跃任务。',
+  'No archived tasks.': '没有已归档任务。',
+  'Recents': '最近',
+  'Someone gifted you Claude': '有人赠送了您 Claude',
+  "Couldn't send your request.": '无法发送您的请求。',
+  "Couldn't rename this task.": '无法重命名此任务。',
+  "Couldn't archive this task.": '无法归档此任务。',
+  "Couldn't delete this task.": '无法删除此任务。',
+  'Something went wrong while deleting.': '删除时出错。',
+  'Refresh the page and try again': '请刷新页面后重试',
 };
 
 let replaced = 0;
 
-// Replace in UI property contexts
+// Phase 1: Replace in UI property contexts (label, children, title, etc.)
 for (const [en, zh] of Object.entries(uiReplacements)) {
   const escaped = en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const props = ['label', 'children', 'title', 'text', 'placeholder', 'tooltip', 'description', 'aria-label'];
   for (const prop of props) {
-    const re = new RegExp(`(${prop}):"${escaped}"`, 'g');
+    const re = new RegExp(`(${prop}):\\s*"${escaped}"`, 'g');
     const m = content.match(re);
     if (m) {
       replaced += m.length;
@@ -131,7 +128,7 @@ for (const [en, zh] of Object.entries(uiReplacements)) {
   }
 }
 
-// Replace in defaultMessage fallback contexts
+// Phase 2: Replace in defaultMessage fallback contexts
 for (const [en, zh] of Object.entries(uiReplacements)) {
   const escaped = en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const re = new RegExp(`(defaultMessage):"${escaped}"`, 'g');
@@ -139,6 +136,50 @@ for (const [en, zh] of Object.entries(uiReplacements)) {
   if (m) {
     replaced += m.length;
     content = content.replace(re, `$1:"${zh}"`);
+  }
+}
+
+// Phase 3: Replace hardcoded strings inside ternary expressions and other complex contexts
+// These strings bypass the i18n system and need direct string replacement
+const directReplacements = [
+  // Sidebar button ternary: "cowork"===s?"New task":"New chat"
+  { pattern: '?"New task":"New chat"', replacement: '?"新任务":"新对话"' },
+  // Default title fallback: ||"New task"
+  { pattern: '||"New task"', replacement: '||"新任务"' },
+  // Command palette baseDescription
+  { pattern: 'baseDescription:"New chat"', replacement: 'baseDescription:"新对话"' },
+  { pattern: 'baseDescription:"New task"', replacement: 'baseDescription:"新任务"' },
+  // sessionData second arg: RQ(t,s,"New task")
+  { pattern: 'RQ(t,s,"New task")', replacement: 'RQ(t,s,"新任务")' },
+  // Tab filter map objects
+  { pattern: 'all:"All",active:"Active",archived:"Archived"', replacement: 'all:"全部",active:"活跃",archived:"已归档"' },
+  // Error messages with "Try again"
+  { pattern: 'Try again.",{error:t})', replacement: '重试。",{error:t})' },
+  { pattern: 'Try again.",{error:e})', replacement: '重试。",{error:e})' },
+  { pattern: 'Refresh the page and try again",{', replacement: '请刷新页面后重试",{ ' },
+  // Organization sign-in error
+  { pattern: 'Sign in and try again."', replacement: '请登录后重试。"' },
+  // Ternary with "Recents" in sidebar
+  { pattern: 'recents:"Recents",shared:"Shared"', replacement: 'recents:"最近",shared:"共享"' },
+  // Free/Pro/Max plan labels in ternary
+  { pattern: '?"Pro":s.capabilities.includes("claude_max")?"Max":"Free"', replacement: '?"Pro":s.capabilities.includes("claude_max")?"Max":"免费"' },
+  // Empty state messages for task tabs
+  { pattern: 'all:"No tasks yet."', replacement: 'all:"暂无任务。"' },
+  { pattern: 'active:"No active tasks."', replacement: 'active:"没有活跃任务。"' },
+  { pattern: 'archived:"No archived tasks."', replacement: 'archived:"没有已归档任务。"' },
+  // More empty state patterns
+  { pattern: 'recents:"No tasks yet."', replacement: 'recents:"暂无任务。"' },
+  { pattern: 'shared:"You haven\'t shared any tasks yet."', replacement: 'shared:"您还没有共享任何任务。"' },
+  { pattern: 'noResults:"No tasks match your search."', replacement: 'noResults:"没有匹配的任务。"' },
+  { pattern: 'searchPlaceholder:"Filter tasks"', replacement: 'searchPlaceholder:"筛选任务"' },
+];
+
+for (const { pattern, replacement } of directReplacements) {
+  if (pattern === replacement) continue; // skip no-op
+  const m = content.match(new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'));
+  if (m) {
+    replaced += m.length;
+    content = content.replaceAll(pattern, replacement);
   }
 }
 
