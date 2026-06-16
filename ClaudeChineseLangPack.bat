@@ -59,7 +59,9 @@ echo === Step 3/3: Starting Claude Desktop ===
 call :START_CLAUDE
 echo.
 echo === Done! Please set language to Chinese in Claude settings.
-timeout /t 3 /nobreak >nul
+echo.
+echo 按任意键返回主菜单...
+pause >nul
 goto MENU
 
 :LANG_ONLY
@@ -75,7 +77,9 @@ echo === Step 3/3: Starting Claude Desktop ===
 call :START_CLAUDE
 echo.
 echo === Done! Please set language to Chinese in Claude settings.
-timeout /t 3 /nobreak >nul
+echo.
+echo 按任意键返回主菜单...
+pause >nul
 goto MENU
 
 :UNINSTALL
@@ -91,7 +95,9 @@ echo === Step 3/3: Starting Claude Desktop ===
 call :START_CLAUDE
 echo.
 echo === Language pack uninstalled.
-timeout /t 3 /nobreak >nul
+echo.
+echo 按任意键返回主菜单...
+pause >nul
 goto MENU
 
 :EXIT
