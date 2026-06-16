@@ -237,7 +237,14 @@ function Patch-JsLanguage {
             continue
         }
 
-        Write-Host "  [警告] 未匹配到语言列表: $($jsFile.Name) (Claude 可能已更新)" -ForegroundColor Yellow
+        # Only warn for files that look like they should have a language list
+        if ($content.Contains('"de-DE"') -and $content.Contains('"id-ID"')) {
+            Write-Host "  [警告] 未匹配到语言列表: $($jsFile.Name) (Claude 可能已更新)" -ForegroundColor Yellow
+        }
+    }
+
+    if (-not $patched) {
+        Write-Host "  [警告] 未在任何 JS 文件中找到语言列表 (Claude 可能已更新)" -ForegroundColor Yellow
     }
 
     return $patched
