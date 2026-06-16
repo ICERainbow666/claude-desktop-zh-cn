@@ -179,7 +179,8 @@ function Patch-JsLanguage {
 
     $exactOld = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID"]'
     $exactNew = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID","zh-CN"]'
-    $regex = [regex]'((?:\w+)=\["en-US"(?:,"[^"]+")+)\]'
+    # Regex handles any variable name and optional trailing comma: VarName=["en-US",...,"xx-XX" (,)]
+    $regex = [regex]'((?:\w+)=\["en-US"(?:,"[^"]+")*),?\]'
 
     $patched = $false
 
@@ -231,7 +232,8 @@ function Unpatch-JsLanguage {
     $jsFiles = Get-ChildItem -LiteralPath $assetsDir -Filter "index-*.js" -File -ErrorAction SilentlyContinue
     $exactOld = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID","zh-CN"]'
     $exactNew = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID"]'
-    $regex = [regex]'((?:\w+)=\[(?:"[^"]+",)+)"zh-CN"\]'
+    # Regex handles any variable name and optional trailing comma around zh-CN
+    $regex = [regex]'((?:\w+)=\[(?:"[^"]+",)+)"zh-CN",?\]'
 
     foreach ($jsFile in $jsFiles) {
         $backupPath = Join-Path $backupDir $jsFile.Name
