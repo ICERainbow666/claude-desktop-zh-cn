@@ -289,7 +289,6 @@ function Unpatch-JsLanguage {
         $content = [System.IO.File]::ReadAllText($jsFile.FullName)
 
         if (-not $content.Contains('"zh-CN"')) {
-            Write-Host "  无需恢复: $($jsFile.Name)"
             continue
         }
 
