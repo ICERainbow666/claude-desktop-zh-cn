@@ -323,6 +323,58 @@ function Unpatch-JsLanguage {
     }
 }
 
+function Patch-HardcodedStrings {
+    param(
+        [Parameter(Mandatory = $true)][string]$ResourcesPath
+    )
+
+    $assetsDir = Join-Path $ResourcesPath "ion-dist\assets\v1"
+    if (-not (Test-Path -LiteralPath $assetsDir -PathType Container)) { return }
+
+    # These strings bypass the i18n system and must be replaced directly in JS
+    $replacements = @(
+        @{ Old = '"New code session"'; New = '"新建代码会话"' },
+        @{ Old = '"Go to home"'; New = '"返回首页"' },
+        @{ Old = '"Phone call"'; New = '"电话"' },
+        @{ Old = '?"New task":"New chat"'; New = '?"新任务":"新对话"' },
+        @{ Old = '||"New task"'; New = '||"新任务"' },
+        @{ Old = 'baseDescription:"New chat"'; New = 'baseDescription:"新对话"' },
+        @{ Old = 'baseDescription:"New task"'; New = 'baseDescription:"新任务"' },
+        @{ Old = 'recents:"Recents",shared:"Shared"'; New = 'recents:"最近",shared:"共享"' },
+        @{ Old = 'all:"All",active:"Active",archived:"Archived"'; New = 'all:"全部",active:"活跃",archived:"已归档"' },
+        @{ Old = 'all:"No tasks yet."'; New = 'all:"暂无任务。"' },
+        @{ Old = 'active:"No active tasks."'; New = 'active:"没有活跃任务。"' },
+        @{ Old = 'archived:"No archived tasks."'; New = 'archived:"没有已归档任务。"' }
+    )
+
+    $patched = 0
+    $jsFiles = Get-ChildItem -LiteralPath $assetsDir -Filter "*.js" -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Length -lt 10MB }
+
+    foreach ($jsFile in $jsFiles) {
+        $content = [System.IO.File]::ReadAllText($jsFile.FullName)
+        $changed = $false
+
+        foreach ($r in $replacements) {
+            if ($content.Contains($r.Old)) {
+                $content = $content.Replace($r.Old, $r.New)
+                $changed = $true
+                $patched++
+            }
+        }
+
+        if ($changed) {
+            Grant-WriteAccess -Path $jsFile.FullName
+            Write-Utf8File -Path $jsFile.FullName -Content $content
+            Write-Host "  硬编码替换: $($jsFile.Name)"
+        }
+    }
+
+    if ($patched -gt 0) {
+        Write-Host "  共替换 $patched 处硬编码字符串"
+    }
+}
+
 function Update-Config {
     param(
         [Parameter(Mandatory = $true)][string]$Locale
@@ -572,12 +624,12 @@ function Install-LanguagePack {
     }
 
     Write-Host ""
-    Write-Host "[1/5] 查找 Claude Desktop..."
+    Write-Host "[1/6] 查找 Claude Desktop..."
     $resolved = Resolve-ClaudeResources
     Write-Host "  Claude: $($resolved.ClaudePath)"
 
     Write-Host ""
-    Write-Host "[2/5] 获取写入权限..."
+    Write-Host "[2/6] 获取写入权限..."
 
     # WindowsApps 目录有系统级保护，需要给路径链上的关键目录都授予管理员权限
     $claudeParent = Split-Path -Parent $resolved.ClaudePath  # C:\Program Files\WindowsApps
@@ -616,7 +668,7 @@ function Install-LanguagePack {
     Write-Host "  权限处理完成"
 
     Write-Host ""
-    Write-Host "[3/5] 安装翻译文件..."
+    Write-Host "[3/6] 安装翻译文件..."
     $targets = @(
         [pscustomobject]@{ Source = $required[0].Path; Target = (Join-Path $resolved.ResourcesPath "ion-dist\i18n\zh-CN.json") },
         [pscustomobject]@{ Source = $required[1].Path; Target = (Join-Path $resolved.ResourcesPath "zh-CN.json") },
@@ -631,11 +683,15 @@ function Install-LanguagePack {
     }
 
     Write-Host ""
-    Write-Host "[4/5] 注册中文语言..."
+    Write-Host "[4/6] 注册中文语言..."
     [void](Patch-JsLanguage -ResourcesPath $resolved.ResourcesPath)
 
     Write-Host ""
-    Write-Host "[5/5] 更新配置..."
+    Write-Host "[5/6] 替换硬编码字符串..."
+    Patch-HardcodedStrings -ResourcesPath $resolved.ResourcesPath
+
+    Write-Host ""
+    Write-Host "[6/6] 更新配置..."
     Update-Config -Locale "zh-CN"
 
     Write-Host ""
