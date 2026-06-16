@@ -483,7 +483,7 @@ function Unpatch-HardcodedStrings {
         @{ Old = '"暂无任务。"'; New = '"No tasks yet."' },
         @{ Old = '"没有活跃任务。"'; New = '"No active tasks."' },
         @{ Old = '"没有已归档任务。"'; New = '"No archived tasks."' },
-        @{ Old = '"重试。"'; New = '"Try again."' },
+        @{ Old = '"重试。"'; New = '"Try again."' }
 
     )
 
