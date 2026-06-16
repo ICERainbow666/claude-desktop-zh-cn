@@ -764,13 +764,15 @@ function Install-LanguagePack {
         Write-Host ("  {0}: OK ({1}KB)" -f $item.Name, $sizeKb)
     }
 
+    $totalSteps = if ($TranslationOnly) { 5 } else { 6 }
+
     Write-Host ""
-    Write-Host "[1/6] 查找 Claude Desktop..."
+    Write-Host "[1/$totalSteps] 查找 Claude Desktop..."
     $resolved = Resolve-ClaudeResources
     Write-Host "  Claude: $($resolved.ClaudePath)"
 
     Write-Host ""
-    Write-Host "[2/6] 获取写入权限..."
+    Write-Host "[2/$totalSteps] 获取写入权限..."
 
     # WindowsApps 目录有系统级保护，需要给路径链上的关键目录都授予管理员权限
     $claudeParent = Split-Path -Parent $resolved.ClaudePath  # C:\Program Files\WindowsApps
@@ -809,7 +811,7 @@ function Install-LanguagePack {
     Write-Host "  权限处理完成"
 
     Write-Host ""
-    Write-Host "[3/6] 安装翻译文件..."
+    Write-Host "[3/$totalSteps] 安装翻译文件..."
     $targets = @(
         [pscustomobject]@{ Source = $required[0].Path; Target = (Join-Path $resolved.ResourcesPath "ion-dist\i18n\zh-CN.json") },
         [pscustomobject]@{ Source = $required[1].Path; Target = (Join-Path $resolved.ResourcesPath "zh-CN.json") },
@@ -825,20 +827,24 @@ function Install-LanguagePack {
 
     if ($TranslationOnly) {
         Write-Host ""
-        Write-Host "[4/4] 更新配置..."
+        Write-Host "[4/$totalSteps] 注册中文语言..."
+        [void](Patch-JsLanguage -ResourcesPath $resolved.ResourcesPath)
+
+        Write-Host ""
+        Write-Host "[5/$totalSteps] 更新配置..."
         Update-Config -Locale "zh-CN"
     }
     else {
         Write-Host ""
-        Write-Host "[4/6] 注册中文语言..."
+        Write-Host "[4/$totalSteps] 注册中文语言..."
         [void](Patch-JsLanguage -ResourcesPath $resolved.ResourcesPath)
 
         Write-Host ""
-        Write-Host "[5/6] 替换硬编码字符串..."
+        Write-Host "[5/$totalSteps] 替换硬编码字符串..."
         Patch-HardcodedStrings -ResourcesPath $resolved.ResourcesPath
 
         Write-Host ""
-        Write-Host "[6/6] 更新配置..."
+        Write-Host "[6/$totalSteps] 更新配置..."
         Update-Config -Locale "zh-CN"
     }
 
