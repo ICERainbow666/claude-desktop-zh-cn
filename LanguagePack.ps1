@@ -378,9 +378,9 @@ function Patch-HardcodedStrings {
         @{ Old = '"Phone call"'; New = '"电话"' },
         @{ Old = '"Recents"'; New = '"最近"' },
         @{ Old = '"Shared"'; New = '"共享"' },
-        @{ Old = '"No tasks yet."', New = '"暂无任务。"' },
-        @{ Old = '"No active tasks."', New = '"没有活跃任务。"' },
-        @{ Old = '"No archived tasks."', New = '"没有已归档任务。"' }
+        @{ Old = '"No tasks yet."'; New = '"暂无任务。"' },
+        @{ Old = '"No active tasks."'; New = '"没有活跃任务。"' },
+        @{ Old = '"No archived tasks."'; New = '"没有已归档任务。"' }
     )
 
     $patched = 0
