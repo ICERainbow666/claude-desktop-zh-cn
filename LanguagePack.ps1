@@ -380,14 +380,7 @@ function Patch-HardcodedStrings {
         @{ Old = '"Shared"'; New = '"共享"' },
         @{ Old = '"No tasks yet."'; New = '"暂无任务。"' },
         @{ Old = '"No active tasks."'; New = '"没有活跃任务。"' },
-        @{ Old = '"No archived tasks."'; New = '"没有已归档任务。"' },
-        # --- Dev tools & settings ---
-        @{ Old = '"Enable Main Process Debugger"'; New = '"启用主进程调试器"' },
-        @{ Old = '"Record Performance Trace"'; New = '"记录性能跟踪"' },
-        @{ Old = '"Write Main Process Heap Snapshot"'; New = '"写入主进程堆快照"' },
-        @{ Old = '"Record Memory Trace (auto-stop)"'; New = '"记录内存跟踪（自动停止）"' },
-        @{ Old = '"Inference configuration"'; New = '"推理配置"' },
-        @{ Old = '"View changelog"'; New = '"查看更新日志"' }
+        @{ Old = '"No archived tasks."'; New = '"没有已归档任务。"' }
     )
 
     $patched = 0
@@ -491,13 +484,7 @@ function Unpatch-HardcodedStrings {
         @{ Old = '"没有活跃任务。"'; New = '"No active tasks."' },
         @{ Old = '"没有已归档任务。"'; New = '"No archived tasks."' },
         @{ Old = '"重试。"'; New = '"Try again."' },
-        # --- Dev tools & settings ---
-        @{ Old = '"启用主进程调试器"'; New = '"Enable Main Process Debugger"' },
-        @{ Old = '"记录性能跟踪"'; New = '"Record Performance Trace"' },
-        @{ Old = '"写入主进程堆快照"'; New = '"Write Main Process Heap Snapshot"' },
-        @{ Old = '"记录内存跟踪（自动停止）"'; New = '"Record Memory Trace (auto-stop)"' },
-        @{ Old = '"推理配置"'; New = '"Inference configuration"' },
-        @{ Old = '"查看更新日志"'; New = '"View changelog"' }
+
     )
 
     $restored = 0
