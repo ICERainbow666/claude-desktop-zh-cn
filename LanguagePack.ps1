@@ -171,9 +171,10 @@ function Patch-JsLanguage {
         return $false
     }
 
-    $jsFiles = Get-ChildItem -LiteralPath $assetsDir -Filter "index-*.js" -File -ErrorAction SilentlyContinue
+    $jsFiles = Get-ChildItem -LiteralPath $assetsDir -Filter "*.js" -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Length -lt 10MB }  # Skip oversized vendor files
     if (-not $jsFiles) {
-        Write-Host "  [警告] 未找到 index-*.js，跳过 JS 补丁" -ForegroundColor Yellow
+        Write-Host "  [警告] 未找到 JS 文件，跳过 JS 补丁" -ForegroundColor Yellow
         return $false
     }
 
@@ -194,6 +195,8 @@ function Patch-JsLanguage {
         Grant-WriteAccess -Path $jsFile.FullName
 
         $content = [System.IO.File]::ReadAllText($jsFile.FullName)
+        # Skip files without locale data
+        if (-not $content.Contains('"en-US"')) { continue }
         if ($content.Contains('"zh-CN"')) {
             Write-Host "  已注册: $($jsFile.Name)"
             $patched = $true
@@ -251,7 +254,8 @@ function Unpatch-JsLanguage {
         return
     }
 
-    $jsFiles = Get-ChildItem -LiteralPath $assetsDir -Filter "index-*.js" -File -ErrorAction SilentlyContinue
+    $jsFiles = Get-ChildItem -LiteralPath $assetsDir -Filter "*.js" -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Length -lt 10MB }  # Skip oversized vendor files
     # Old array format
     $exactOldArr = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID","zh-CN"]'
     $exactNewArr = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID"]'
@@ -604,7 +608,8 @@ function Install-LanguagePack {
 
     $assetsDir = Join-Path $resolved.ResourcesPath "ion-dist\assets\v1"
     if (Test-Path -LiteralPath $assetsDir -PathType Container) {
-        Get-ChildItem -LiteralPath $assetsDir -Filter "index-*.js" -File -ErrorAction SilentlyContinue |
+        Get-ChildItem -LiteralPath $assetsDir -Filter "*.js" -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Length -lt 10MB } |
             ForEach-Object { Grant-WriteAccess -Path $_.FullName }
     }
 
