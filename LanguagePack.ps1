@@ -394,8 +394,10 @@ function Unpatch-HardcodedStrings {
     $assetsDir = Join-Path $ResourcesPath "ion-dist\assets\v1"
     if (-not (Test-Path -LiteralPath $assetsDir -PathType Container)) { return }
 
-    # Reverse replacements: Chinese back to English
+    # Comprehensive reversals: Chinese back to English
+    # Order matters: longer/more specific patterns first
     $reversals = @(
+        # --- Direct pattern replacements (PS script + Node.js Phase 3) ---
         @{ Old = '?"新任务":"新对话"'; New = '?"New task":"New chat"' },
         @{ Old = '||"新任务"'; New = '||"New task"' },
         @{ Old = 'baseDescription:"新对话"'; New = 'baseDescription:"New chat"' },
@@ -404,7 +406,39 @@ function Unpatch-HardcodedStrings {
         @{ Old = 'all:"全部",active:"活跃",archived:"已归档"'; New = 'all:"All",active:"Active",archived:"Archived"' },
         @{ Old = 'all:"暂无任务。"'; New = 'all:"No tasks yet."' },
         @{ Old = 'active:"没有活跃任务。"'; New = 'active:"No active tasks."' },
-        @{ Old = 'archived:"没有已归档任务。"'; New = 'archived:"No archived tasks."' }
+        @{ Old = 'archived:"没有已归档任务。"'; New = 'archived:"No archived tasks."' },
+        @{ Old = 'recents:"暂无任务。"'; New = 'recents:"No tasks yet."' },
+        @{ Old = 'shared:"您还没有共享任何任务。"'; New = 'shared:"You haven''t shared any tasks yet."' },
+        @{ Old = 'noResults:"没有匹配的任务。"'; New = 'noResults:"No tasks match your search."' },
+        @{ Old = 'searchPlaceholder:"筛选任务"'; New = 'searchPlaceholder:"Filter tasks"' },
+        # --- defaultMessage context (Node.js Phase 2) ---
+        @{ Old = 'defaultMessage:"新建会话"'; New = 'defaultMessage:"New session"' },
+        @{ Old = 'defaultMessage:"新对话"'; New = 'defaultMessage:"New chat"' },
+        @{ Old = 'defaultMessage:"新任务"'; New = 'defaultMessage:"New task"' },
+        @{ Old = 'defaultMessage:"新建代码会话"'; New = 'defaultMessage:"New code session"' },
+        @{ Old = 'defaultMessage:"返回首页"'; New = 'defaultMessage:"Go to home"' },
+        @{ Old = 'defaultMessage:"电话"'; New = 'defaultMessage:"Phone call"' },
+        # --- Object property context (Node.js Phase 1 targets) ---
+        @{ Old = 'label:"新建会话"'; New = 'label:"New session"' },
+        @{ Old = 'label:"新对话"'; New = 'label:"New chat"' },
+        @{ Old = 'label:"新任务"'; New = 'label:"New task"' },
+        @{ Old = 'label:"新建代码会话"'; New = 'label:"New code session"' },
+        @{ Old = 'label:"返回首页"'; New = 'label:"Go to home"' },
+        @{ Old = 'label:"电话"'; New = 'label:"Phone call"' },
+        @{ Old = 'title:"新建会话"'; New = 'title:"New session"' },
+        @{ Old = 'title:"新对话"'; New = 'title:"New chat"' },
+        @{ Old = 'title:"新任务"'; New = 'title:"New task"' },
+        @{ Old = 'title:"返回首页"'; New = 'title:"Go to home"' },
+        @{ Old = 'placeholder:"新建会话"'; New = 'placeholder:"New session"' },
+        @{ Old = 'placeholder:"新对话"'; New = 'placeholder:"New chat"' },
+        @{ Old = 'placeholder:"新任务"'; New = 'placeholder:"New task"' },
+        # --- code/cowork/chat object context (from current patched state) ---
+        @{ Old = 'code:"新建会话"'; New = 'code:"New session"' },
+        @{ Old = 'code:"新建代码会话"'; New = 'code:"New code session"' },
+        @{ Old = 'cowork:"新任务"'; New = 'cowork:"New task"' },
+        @{ Old = 'chat:"新对话"'; New = 'chat:"New chat"' },
+        @{ Old = 'newTask:{defaultMessage:"新任务"'; New = 'newTask:{defaultMessage:"New task"' },
+        @{ Old = 'newRoutine:{defaultMessage:"新建代码会话"'; New = 'newRoutine:{defaultMessage:"New code session"' }
     )
 
     $restored = 0
