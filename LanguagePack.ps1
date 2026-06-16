@@ -386,6 +386,57 @@ function Patch-HardcodedStrings {
     }
 }
 
+function Unpatch-HardcodedStrings {
+    param(
+        [Parameter(Mandatory = $true)][string]$ResourcesPath
+    )
+
+    $assetsDir = Join-Path $ResourcesPath "ion-dist\assets\v1"
+    if (-not (Test-Path -LiteralPath $assetsDir -PathType Container)) { return }
+
+    # Reverse replacements: Chinese back to English
+    $reversals = @(
+        @{ Old = '?"新任务":"新对话"'; New = '?"New task":"New chat"' },
+        @{ Old = '||"新任务"'; New = '||"New task"' },
+        @{ Old = 'baseDescription:"新对话"'; New = 'baseDescription:"New chat"' },
+        @{ Old = 'baseDescription:"新任务"'; New = 'baseDescription:"New task"' },
+        @{ Old = 'recents:"最近",shared:"共享"'; New = 'recents:"Recents",shared:"Shared"' },
+        @{ Old = 'all:"全部",active:"活跃",archived:"已归档"'; New = 'all:"All",active:"Active",archived:"Archived"' },
+        @{ Old = 'all:"暂无任务。"'; New = 'all:"No tasks yet."' },
+        @{ Old = 'active:"没有活跃任务。"'; New = 'active:"No active tasks."' },
+        @{ Old = 'archived:"没有已归档任务。"'; New = 'archived:"No archived tasks."' }
+    )
+
+    $restored = 0
+    $jsFiles = Get-ChildItem -LiteralPath $assetsDir -Filter "*.js" -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Length -lt 10MB }
+
+    foreach ($jsFile in $jsFiles) {
+        $content = [System.IO.File]::ReadAllText($jsFile.FullName)
+        $changed = $false
+
+        foreach ($r in $reversals) {
+            if ($content.Contains($r.Old)) {
+                $content = $content.Replace($r.Old, $r.New)
+                $changed = $true
+                $restored++
+            }
+        }
+
+        if ($changed) {
+            Grant-WriteAccess -Path $jsFile.FullName
+            Write-Utf8File -Path $jsFile.FullName -Content $content
+            Write-Host "  还原硬编码字符串: $($jsFile.Name)"
+        }
+    }
+
+    if ($restored -gt 0) {
+        Write-Host "  共还原 $restored 处硬编码字符串"
+    } else {
+        Write-Host "  未发现需要还原的硬编码字符串"
+    }
+}
+
 function Update-Config {
     param(
         [Parameter(Mandatory = $true)][string]$Locale
@@ -728,12 +779,12 @@ function Uninstall-LanguagePack {
     Write-Host "=== Claude Desktop 中文语言包卸载 ==="
     Write-Host ""
 
-    Write-Host "[1/4] 查找 Claude Desktop..."
+    Write-Host "[1/5] 查找 Claude Desktop..."
     $resolved = Resolve-ClaudeResources
     Write-Host "  Claude: $($resolved.ClaudePath)"
 
     Write-Host ""
-    Write-Host "[2/4] 删除翻译文件..."
+    Write-Host "[2/5] 删除翻译文件..."
 
     # 确保路径链上的关键目录有权限
     $claudeParent = Split-Path -Parent $resolved.ClaudePath
@@ -762,11 +813,15 @@ function Uninstall-LanguagePack {
     Write-Host "  翻译文件已删除"
 
     Write-Host ""
-    Write-Host "[3/4] 恢复语言注册..."
+    Write-Host "[3/5] 恢复语言注册..."
     Unpatch-JsLanguage -ResourcesPath $resolved.ResourcesPath
 
     Write-Host ""
-    Write-Host "[4/4] 恢复配置..."
+    Write-Host "[4/5] 还原硬编码字符串..."
+    Unpatch-HardcodedStrings -ResourcesPath $resolved.ResourcesPath
+
+    Write-Host ""
+    Write-Host "[5/5] 恢复配置..."
     Update-Config -Locale "en-US"
 
     Write-Host ""
