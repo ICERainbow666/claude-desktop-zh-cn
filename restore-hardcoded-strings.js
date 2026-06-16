@@ -82,6 +82,13 @@ const reversals = [
   ['"暂无任务。"', '"No tasks yet."'],
   ['"没有活跃任务。"', '"No active tasks."'],
   ['"没有已归档任务。"', '"No archived tasks."'],
+  // Dev tools & settings
+  ['"启用主进程调试器"', '"Enable Main Process Debugger"'],
+  ['"记录性能跟踪"', '"Record Performance Trace"'],
+  ['"写入主进程堆快照"', '"Write Main Process Heap Snapshot"'],
+  ['"记录内存跟踪（自动停止）"', '"Record Memory Trace (auto-stop)"'],
+  ['"推理配置"', '"Inference configuration"'],
+  ['"查看更新日志"', '"View changelog"'],
   ['"重试。"', '"Try again."'],
 ];
 
