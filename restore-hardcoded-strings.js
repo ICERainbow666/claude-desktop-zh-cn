@@ -63,6 +63,15 @@ const reversals = [
   ['chat:"新对话"', 'chat:"New chat"'],
   ['newTask:{defaultMessage:"新任务"', 'newTask:{defaultMessage:"New task"'],
   ['newRoutine:{defaultMessage:"新建代码会话"', 'newRoutine:{defaultMessage:"New code session"'],
+  // Global standalone strings (must be after specific patterns)
+  ['"新建会话"', '"New session"'],
+  ['"新对话"', '"New chat"'],
+  ['"新任务"', '"New task"'],
+  ['"新建代码会话"', '"New code session"'],
+  ['"新建计划任务"', '"New scheduled task"'],
+  ['"返回首页"', '"Go to home"'],
+  ['"电话"', '"Phone call"'],
+  ['"重试。"', '"Try again."'],
 ];
 
 let totalRestored = 0;

@@ -438,7 +438,16 @@ function Unpatch-HardcodedStrings {
         @{ Old = 'cowork:"新任务"'; New = 'cowork:"New task"' },
         @{ Old = 'chat:"新对话"'; New = 'chat:"New chat"' },
         @{ Old = 'newTask:{defaultMessage:"新任务"'; New = 'newTask:{defaultMessage:"New task"' },
-        @{ Old = 'newRoutine:{defaultMessage:"新建代码会话"'; New = 'newRoutine:{defaultMessage:"New code session"' }
+        @{ Old = 'newRoutine:{defaultMessage:"新建代码会话"'; New = 'newRoutine:{defaultMessage:"New code session"' },
+        # --- Global standalone string reversals ---
+        @{ Old = '"新建会话"'; New = '"New session"' },
+        @{ Old = '"新对话"'; New = '"New chat"' },
+        @{ Old = '"新任务"'; New = '"New task"' },
+        @{ Old = '"新建代码会话"'; New = '"New code session"' },
+        @{ Old = '"新建计划任务"'; New = '"New scheduled task"' },
+        @{ Old = '"返回首页"'; New = '"Go to home"' },
+        @{ Old = '"电话"'; New = '"Phone call"' },
+        @{ Old = '"重试。"'; New = '"Try again."' }
     )
 
     $restored = 0
