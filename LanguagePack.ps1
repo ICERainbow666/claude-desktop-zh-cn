@@ -66,13 +66,18 @@ function Write-Utf8File {
     [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
 }
 
+$ExpectedVersion = '1.12603.1.0'
+
 function Find-ClaudePath {
     try {
         $pkg = Get-AppxPackage -Name Claude -ErrorAction Stop |
             Sort-Object Version -Descending |
             Select-Object -First 1
         if ($pkg -and $pkg.InstallLocation -and (Test-Path -LiteralPath $pkg.InstallLocation)) {
-            return $pkg.InstallLocation
+            return [pscustomobject]@{
+                Path = $pkg.InstallLocation
+                Version = $pkg.Version.ToString()
+            }
         }
     }
     catch {
@@ -732,18 +737,19 @@ function Get-RequiredTranslationFiles {
 }
 
 function Resolve-ClaudeResources {
-    $claudePath = Find-ClaudePath
-    if (-not $claudePath) {
+    $found = Find-ClaudePath
+    if (-not $found) {
         throw "未检测到 Claude Desktop"
     }
 
-    $resourcesPath = Get-ResourcesPath -ClaudePath $claudePath
+    $resourcesPath = Get-ResourcesPath -ClaudePath $found.Path
     if (-not $resourcesPath) {
         throw "未找到 resources 目录"
     }
 
     return [pscustomobject]@{
-        ClaudePath = $claudePath
+        ClaudePath = $found.Path
+        Version = $found.Version
         ResourcesPath = $resourcesPath
     }
 }
@@ -770,82 +776,139 @@ function Install-LanguagePack {
     Write-Host "[1/$totalSteps] 查找 Claude Desktop..."
     $resolved = Resolve-ClaudeResources
     Write-Host "  Claude: $($resolved.ClaudePath)"
+    Write-Host "  版本:  $($resolved.Version)"
+
+    if ($resolved.Version -ne $ExpectedVersion) {
+        Write-Host ""
+        Write-Host "[错误] 版本不匹配!" -ForegroundColor Red
+        Write-Host "  预期版本: $ExpectedVersion" -ForegroundColor Red
+        Write-Host "  当前版本: $($resolved.Version)" -ForegroundColor Red
+        Write-Host "  请下载对应版本的语言包。" -ForegroundColor Yellow
+        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+        exit 1
+    }
+    Write-Host "  版本验证通过"
 
     Write-Host ""
     Write-Host "[2/$totalSteps] 获取写入权限..."
-
-    # WindowsApps 目录有系统级保护，需要给路径链上的关键目录都授予管理员权限
-    $claudeParent = Split-Path -Parent $resolved.ClaudePath  # C:\Program Files\WindowsApps
-    $appPath = Join-Path $resolved.ClaudePath "app"
-    $criticalPaths = @($claudeParent, $resolved.ClaudePath, $appPath, $resolved.ResourcesPath)
-    foreach ($path in $criticalPaths) {
-        if (Test-Path -LiteralPath $path) {
-            try {
+    try {
+        # WindowsApps 目录有系统级保护，需要给路径链上的关键目录都授予管理员权限
+        $claudeParent = Split-Path -Parent $resolved.ClaudePath  # C:\Program Files\WindowsApps
+        $appPath = Join-Path $resolved.ClaudePath "app"
+        $criticalPaths = @($claudeParent, $resolved.ClaudePath, $appPath, $resolved.ResourcesPath)
+        foreach ($path in $criticalPaths) {
+            if (Test-Path -LiteralPath $path) {
                 & takeown.exe "/f" $path "/a" | Out-Null
                 & icacls.exe $path "/grant" "BUILTIN\Administrators:(OI)(CI)(F)" "/c" | Out-Null
             }
-            catch { }
         }
+
+        $pathsToGrant = @(
+            $resolved.ResourcesPath,
+            (Join-Path $resolved.ResourcesPath "ion-dist"),
+            (Join-Path $resolved.ResourcesPath "ion-dist\i18n"),
+            (Join-Path $resolved.ResourcesPath "ion-dist\i18n\dynamic"),
+            (Join-Path $resolved.ResourcesPath "ion-dist\assets"),
+            (Join-Path $resolved.ResourcesPath "ion-dist\assets\v1")
+        )
+
+        foreach ($path in $pathsToGrant) {
+            Grant-WriteAccess -Path $path
+        }
+
+        $assetsDir = Join-Path $resolved.ResourcesPath "ion-dist\assets\v1"
+        if (Test-Path -LiteralPath $assetsDir -PathType Container) {
+            Get-ChildItem -LiteralPath $assetsDir -Filter "*.js" -File |
+                Where-Object { $_.Length -lt 10MB } |
+                ForEach-Object { Grant-WriteAccess -Path $_.FullName }
+        }
+
+        Write-Host "  权限处理完成"
     }
-
-    $pathsToGrant = @(
-        $resolved.ResourcesPath,
-        (Join-Path $resolved.ResourcesPath "ion-dist"),
-        (Join-Path $resolved.ResourcesPath "ion-dist\i18n"),
-        (Join-Path $resolved.ResourcesPath "ion-dist\i18n\dynamic"),
-        (Join-Path $resolved.ResourcesPath "ion-dist\assets"),
-        (Join-Path $resolved.ResourcesPath "ion-dist\assets\v1")
-    )
-
-    foreach ($path in $pathsToGrant) {
-        Grant-WriteAccess -Path $path
+    catch {
+        Write-Host "  [错误] 获取写入权限失败: $($_.Exception.Message)" -ForegroundColor Red
+        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+        exit 1
     }
-
-    $assetsDir = Join-Path $resolved.ResourcesPath "ion-dist\assets\v1"
-    if (Test-Path -LiteralPath $assetsDir -PathType Container) {
-        Get-ChildItem -LiteralPath $assetsDir -Filter "*.js" -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Length -lt 10MB } |
-            ForEach-Object { Grant-WriteAccess -Path $_.FullName }
-    }
-
-    Write-Host "  权限处理完成"
 
     Write-Host ""
     Write-Host "[3/$totalSteps] 安装翻译文件..."
-    $targets = @(
-        [pscustomobject]@{ Source = $required[0].Path; Target = (Join-Path $resolved.ResourcesPath "ion-dist\i18n\zh-CN.json") },
-        [pscustomobject]@{ Source = $required[1].Path; Target = (Join-Path $resolved.ResourcesPath "zh-CN.json") },
-        [pscustomobject]@{ Source = $required[2].Path; Target = (Join-Path $resolved.ResourcesPath "ion-dist\i18n\dynamic\zh-CN.json") }
-    )
+    try {
+        $targets = @(
+            [pscustomobject]@{ Source = $required[0].Path; Target = (Join-Path $resolved.ResourcesPath "ion-dist\i18n\zh-CN.json") },
+            [pscustomobject]@{ Source = $required[1].Path; Target = (Join-Path $resolved.ResourcesPath "zh-CN.json") },
+            [pscustomobject]@{ Source = $required[2].Path; Target = (Join-Path $resolved.ResourcesPath "ion-dist\i18n\dynamic\zh-CN.json") }
+        )
 
-    foreach ($target in $targets) {
-        [System.IO.Directory]::CreateDirectory((Split-Path -Parent $target.Target)) | Out-Null
-        Copy-Item -LiteralPath $target.Source -Destination $target.Target -Force
-        $relativeTarget = $target.Target.Substring($resolved.ResourcesPath.Length).TrimStart("\")
-        Write-Host "  $relativeTarget"
+        foreach ($target in $targets) {
+            [System.IO.Directory]::CreateDirectory((Split-Path -Parent $target.Target)) | Out-Null
+            Copy-Item -LiteralPath $target.Source -Destination $target.Target -Force
+            $relativeTarget = $target.Target.Substring($resolved.ResourcesPath.Length).TrimStart("\")
+            Write-Host "  $relativeTarget"
+        }
+    }
+    catch {
+        Write-Host "  [错误] 安装翻译文件失败: $($_.Exception.Message)" -ForegroundColor Red
+        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+        exit 1
     }
 
     if ($TranslationOnly) {
         Write-Host ""
         Write-Host "[4/$totalSteps] 注册中文语言..."
-        [void](Patch-JsLanguage -ResourcesPath $resolved.ResourcesPath)
+        try {
+            [void](Patch-JsLanguage -ResourcesPath $resolved.ResourcesPath)
+        }
+        catch {
+            Write-Host "  [错误] 注册语言失败: $($_.Exception.Message)" -ForegroundColor Red
+            $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+            exit 1
+        }
 
         Write-Host ""
         Write-Host "[5/$totalSteps] 更新配置..."
-        Update-Config -Locale "zh-CN"
+        try {
+            Update-Config -Locale "zh-CN"
+        }
+        catch {
+            Write-Host "  [错误] 更新配置失败: $($_.Exception.Message)" -ForegroundColor Red
+            $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+            exit 1
+        }
     }
     else {
         Write-Host ""
         Write-Host "[4/$totalSteps] 注册中文语言..."
-        [void](Patch-JsLanguage -ResourcesPath $resolved.ResourcesPath)
+        try {
+            [void](Patch-JsLanguage -ResourcesPath $resolved.ResourcesPath)
+        }
+        catch {
+            Write-Host "  [错误] 注册语言失败: $($_.Exception.Message)" -ForegroundColor Red
+            $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+            exit 1
+        }
 
         Write-Host ""
         Write-Host "[5/$totalSteps] 替换硬编码字符串..."
-        Patch-HardcodedStrings -ResourcesPath $resolved.ResourcesPath
+        try {
+            Patch-HardcodedStrings -ResourcesPath $resolved.ResourcesPath
+        }
+        catch {
+            Write-Host "  [错误] 替换硬编码字符串失败: $($_.Exception.Message)" -ForegroundColor Red
+            $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+            exit 1
+        }
 
         Write-Host ""
         Write-Host "[6/$totalSteps] 更新配置..."
-        Update-Config -Locale "zh-CN"
+        try {
+            Update-Config -Locale "zh-CN"
+        }
+        catch {
+            Write-Host "  [错误] 更新配置失败: $($_.Exception.Message)" -ForegroundColor Red
+            $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+            exit 1
+        }
     }
 
     Write-Host ""
@@ -867,47 +930,83 @@ function Uninstall-LanguagePack {
     Write-Host "[1/5] 查找 Claude Desktop..."
     $resolved = Resolve-ClaudeResources
     Write-Host "  Claude: $($resolved.ClaudePath)"
+    Write-Host "  版本:  $($resolved.Version)"
+
+    if ($resolved.Version -ne $ExpectedVersion) {
+        Write-Host ""
+        Write-Host "[错误] 版本不匹配!" -ForegroundColor Red
+        Write-Host "  预期版本: $ExpectedVersion" -ForegroundColor Red
+        Write-Host "  当前版本: $($resolved.Version)" -ForegroundColor Red
+        Write-Host "  请下载对应版本的语言包。" -ForegroundColor Yellow
+        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+        exit 1
+    }
+    Write-Host "  版本验证通过"
 
     Write-Host ""
     Write-Host "[2/5] 删除翻译文件..."
-
-    # 确保路径链上的关键目录有权限
-    $claudeParent = Split-Path -Parent $resolved.ClaudePath
-    $appPath = Join-Path $resolved.ClaudePath "app"
-    $criticalPaths = @($claudeParent, $resolved.ClaudePath, $appPath, $resolved.ResourcesPath)
-    foreach ($path in $criticalPaths) {
-        if (Test-Path -LiteralPath $path) {
-            try {
+    try {
+        # 确保路径链上的关键目录有权限
+        $claudeParent = Split-Path -Parent $resolved.ClaudePath
+        $appPath = Join-Path $resolved.ClaudePath "app"
+        $criticalPaths = @($claudeParent, $resolved.ClaudePath, $appPath, $resolved.ResourcesPath)
+        foreach ($path in $criticalPaths) {
+            if (Test-Path -LiteralPath $path) {
                 & takeown.exe "/f" $path "/a" | Out-Null
                 & icacls.exe $path "/grant" "BUILTIN\Administrators:(OI)(CI)(F)" "/c" | Out-Null
             }
-            catch { }
         }
-    }
 
-    foreach ($path in @(
-            (Join-Path $resolved.ResourcesPath "ion-dist\i18n\zh-CN.json"),
-            (Join-Path $resolved.ResourcesPath "zh-CN.json"),
-            (Join-Path $resolved.ResourcesPath "ion-dist\i18n\dynamic\zh-CN.json")
-        )) {
-        if (Test-Path -LiteralPath $path -PathType Leaf) {
-            Grant-WriteAccess -Path $path
-            Remove-Item -LiteralPath $path -Force
+        foreach ($path in @(
+                (Join-Path $resolved.ResourcesPath "ion-dist\i18n\zh-CN.json"),
+                (Join-Path $resolved.ResourcesPath "zh-CN.json"),
+                (Join-Path $resolved.ResourcesPath "ion-dist\i18n\dynamic\zh-CN.json")
+            )) {
+            if (Test-Path -LiteralPath $path -PathType Leaf) {
+                Grant-WriteAccess -Path $path
+                Remove-Item -LiteralPath $path -Force
+            }
         }
+        Write-Host "  翻译文件已删除"
     }
-    Write-Host "  翻译文件已删除"
+    catch {
+        Write-Host "  [错误] 删除翻译文件失败: $($_.Exception.Message)" -ForegroundColor Red
+        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+        exit 1
+    }
 
     Write-Host ""
     Write-Host "[3/5] 恢复语言注册..."
-    Unpatch-JsLanguage -ResourcesPath $resolved.ResourcesPath
+    try {
+        Unpatch-JsLanguage -ResourcesPath $resolved.ResourcesPath
+    }
+    catch {
+        Write-Host "  [错误] 恢复语言注册失败: $($_.Exception.Message)" -ForegroundColor Red
+        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+        exit 1
+    }
 
     Write-Host ""
     Write-Host "[4/5] 还原硬编码字符串..."
-    Unpatch-HardcodedStrings -ResourcesPath $resolved.ResourcesPath
+    try {
+        Unpatch-HardcodedStrings -ResourcesPath $resolved.ResourcesPath
+    }
+    catch {
+        Write-Host "  [错误] 还原硬编码字符串失败: $($_.Exception.Message)" -ForegroundColor Red
+        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+        exit 1
+    }
 
     Write-Host ""
     Write-Host "[5/5] 恢复配置..."
-    Update-Config -Locale "en-US"
+    try {
+        Update-Config -Locale "en-US"
+    }
+    catch {
+        Write-Host "  [错误] 恢复配置失败: $($_.Exception.Message)" -ForegroundColor Red
+        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+        exit 1
+    }
 
     Write-Host ""
     Write-Host "=== 语言包卸载完成 ==="
