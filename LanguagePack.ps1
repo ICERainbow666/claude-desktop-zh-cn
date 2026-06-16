@@ -334,6 +334,9 @@ function Patch-HardcodedStrings {
     # These strings bypass the i18n system and must be replaced directly in JS
     $replacements = @(
         @{ Old = '"New code session"'; New = '"新建代码会话"' },
+        @{ Old = '"New session"'; New = '"新建会话"' },
+        @{ Old = '"New chat"'; New = '"新对话"' },
+        @{ Old = '"New task"'; New = '"新任务"' },
         @{ Old = '"Go to home"'; New = '"返回首页"' },
         @{ Old = '"Phone call"'; New = '"电话"' },
         @{ Old = '?"New task":"New chat"'; New = '?"新任务":"新对话"' },
