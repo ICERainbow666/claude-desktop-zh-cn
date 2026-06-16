@@ -1,83 +1,131 @@
 # Claude Desktop 简体中文语言包
 
-> **只需把这个仓库丢给 AI Agent，它就能帮你完成安装。**
->
-> Agent 执行 `ClaudeChineseLangPack.bat` 选择「完整安装」即可。
-
 为 Claude Desktop (Windows) 提供简体中文界面翻译。
 
-覆盖 ion-dist（15,996 条）、desktop-shell（374 条）、statsig（46 条）三个模块。
+## 安装方法
 
-> **⚠️ 已知限制：** Claude Desktop 的 JS 中存在部分硬编码英文 UI 字符串（如侧栏的 "New session"、"New chat"、"New task" 等），这些字符串绕过了 i18n 翻译系统。由于 Electron 的 V8 代码缓存机制，直接修改 JS 源文件**无法生效**——即使文件在磁盘上已被修改，Electron 仍会加载缓存的旧版本字节码。因此这些硬编码英文暂时无法通过本语言包翻译。详见 [已知问题](#已知问题硬编码英文-ui-字符串)。
-
-## 前提
-
-- Windows 10 / 11
-- 已安装 [Claude Desktop](https://claude.ai/download)
-- Node.js（仅选项 1 需要，用于尝试修补硬编码字符串，但目前无法生效，推荐使用选项 2）
-
-## 使用方法
-
-双击 `ClaudeChineseLangPack.bat`，按提示选择：
+双击 `ClaudeChineseLangPack.bat`，以**管理员身份**运行，按提示选择：
 
 ```
-1. 完整安装（翻译 + JS 补丁）
-2. 仅安装语言包          ← 推荐
+1. 完整安装（翻译 + JS 硬编码替换）
+2. 仅安装语言包（仅翻译文件，不修改 JS）
 3. 卸载语言包
-4. 还原所有
+0. 退出
 ```
 
 | 选项 | 说明 |
 |------|------|
-| **1. 完整安装** | 替换翻译 JSON + 修补 JS 中硬编码的英文字符串（⚠️ 由于 Electron 缓存机制，JS 补丁可能无法生效） |
-| **2. 仅安装语言包** | 只替换翻译 JSON 文件，不修改 JS  ← **推荐使用** |
-| **3. 卸载语言包** | 删除翻译文件，恢复语言注册，locale 回退到 en-US。如果用过选项 1，会提示改用选项 4 |
-| **4. 还原所有** | 卸载语言包 + 还原 JS 文件到原始状态。如果没用过选项 1，会跳过 JS 还原并提示无硬编码补丁 |
+| **1. 完整安装** | 翻译 JSON + 替换 JS 中硬编码英文 → **推荐** |
+| **2. 仅安装语言包** | 仅替换翻译 JSON，不修改 JS |
+| **3. 卸载语言包** | 删除翻译文件，还原 JS，locale 回退 en-US |
 
 脚本会自动关闭 Claude Desktop、执行操作、再重启 Claude Desktop。
+
+运行完成后会停留在输出界面，按任意键才返回主菜单，方便查看是否有报错。
+
+### 前提
+
+- Windows 10 / 11
+- 已安装 [Claude Desktop](https://claude.ai/download)
+- 管理员权限（脚本会自动请求）
 
 ### 命令行用法（PowerShell）
 
 ```powershell
-# 安装语言包（需管理员权限）
+# 完整安装（需管理员权限）
 powershell -ExecutionPolicy Bypass -File .\LanguagePack.ps1
+
+# 仅安装语言包
+powershell -ExecutionPolicy Bypass -File .\LanguagePack.ps1 -TranslationOnly
 
 # 卸载
 powershell -ExecutionPolicy Bypass -File .\LanguagePack.ps1 -Uninstall
-
-# 修补硬编码英文字符串
-node .\patch-hardcoded-strings.js
-
-# 还原 JS 补丁
-node .\restore-hardcoded-strings.js
 ```
+
+## 覆盖范围
+
+| 模块 | 已翻译 | 未翻译 | 说明 |
+|------|--------|--------|------|
+| ion-dist | 15,892 | 264 | 主界面，剩余为品牌名/格式字符串 |
+| desktop-shell | 420 | 5 | 桌面外壳，剩余为技术缩写 |
+| dynamic | 69 | 0 | 动态内容，全部完成 |
+
+**未翻译的 269 个键**均为不应翻译的内容：
+- 品牌名：Google Play、Python、Surface、Sonnet、Claude、Anthropic、Microsoft 365 等
+- 技术术语：CI、CSV、CLI、USB、GHE 等
+- 格式字符串：`{size} KB`、`{percent}%`、`v{version}` 等
+- URL / 路径占位符：`~/Documents/work`、`https://...` 等
 
 ## 工作原理
 
-### 语言包安装
+### 1. 翻译 JSON 文件
 
-1. **写入翻译文件** — 将 `translated-zh-CN/` 下的 JSON 复制到 Claude 的 resources 目录
-2. **注册 zh-CN 语言** — 在 JS 中补丁语言列表，添加 `"zh-CN"`
-3. **切换配置** — 将 `config.json` 中 `locale` 设为 `"zh-CN"`
+将 `translated-zh-CN/` 下的 3 个 JSON 文件复制到 Claude Desktop 的 `resources` 目录，Claude 的 i18n 系统通过 `fetch('/i18n/{locale}.json')` 加载翻译。
 
-### 硬编码字符串修补（⚠️ 目前无法生效）
+### 2. 注册 zh-CN 语言
 
-Claude Desktop 的 JS 中有一部分 UI 字符串绕过了 i18n 系统（如侧栏的 "New session"、"New chat"、"New task"，以及 "Try again"、"Create with Claude" 等）。`patch-hardcoded-strings.js` 尝试将这些硬编码英文替换为中文，但由于 Electron 的 V8 代码缓存机制，修改后的 JS 文件无法被 Electron 加载，因此**此补丁目前无法生效**。详见下方已知问题。
+在 JS 打包文件中补丁语言列表，添加 `"zh-CN"`，使 Claude 设置页面出现中文选项。
+
+### 3. 替换硬编码字符串
+
+Claude Desktop 的部分 UI 字符串硬编码在 JS 中，绕过了 i18n 系统。脚本通过直接查找替换将英文改为中文，并在替换前备份原始 JS 文件。卸载时自动从备份恢复。
 
 ## 目录结构
 
 ```
-├── ClaudeChineseLangPack.bat         # 统一入口（菜单选择）
-├── LanguagePack.ps1                  # 安装/卸载主脚本
-├── patch-hardcoded-strings.js        # 修补 JS 中硬编码英文
-├── restore-hardcoded-strings.js      # 还原 JS 补丁
-├── translated-zh-CN/                 # 翻译文件
-│   ├── ion-dist/zh-CN.json           # 主界面 (15,996 条)
-│   ├── desktop-shell/zh-CN.json      # 桌面外壳 (374 条)
-│   └── statsig/zh-CN.json            # 功能开关 (46 条)
-├── NOTICE
+├── ClaudeChineseLangPack.bat           # 统一入口（菜单选择）
+├── LanguagePack.ps1                    # 安装/卸载主脚本
+├── translated-zh-CN/                   # 翻译文件
+│   ├── ion-dist/zh-CN.json             # 主界面
+│   ├── ion-dist/dynamic/zh-CN.json     # 动态内容
+│   └── desktop-shell/zh-CN.json        # 桌面外壳
 └── README.md
 ```
+
+## 贡献：报告尚未翻译的英文
+
+安装语言包后，如果界面上仍然有英文，欢迎反馈！
+
+请提供以下信息：
+1. **英文内容**（截图或文字）
+2. **出现位置**（侧栏、设置页、对话页、弹窗等）
+3. **触发方式**（启动时就有 / 点击某个按钮后出现）
+
+可以通过 Issue 或直接提交 PR。
+
+### 可以硬编码翻译的字符串
+
+以下类型的英文可以通过修改 JS 文件来翻译：
+- UI 按钮文字：如 "New session"、"Sign in"
+- 提示文案：如 "No tasks yet."、"Try again"
+- 标签页文字：如 "Recents"、"Shared"
+- 空状态提示：如 "No active tasks."、"No archived tasks."
+- 任何看起来是**普通英文句子或短语**、对用户有实际语义的内容
+
+### 不能硬编码翻译的内容
+
+以下内容**不适用**硬编码替换，不需要报告：
+
+| 类型 | 示例 | 原因 |
+|------|------|------|
+| 品牌名 | Google Play、Python、Sonnet、Surface、Claude | 产品/技术品牌，全球统一 |
+| 技术术语 | CI、CSV、CLI、USB、GHE | 行业通用缩写，无对应中文 |
+| 格式占位符 | `{size} KB`、`{percent}%`、`v{version}` | 程序模板变量，翻译会破坏格式 |
+| URL / 路径 | `~/Documents/work`、`https://...` | 系统路径或链接 |
+| Electron 原生菜单 | "Enable Main Process Debugger"、"Record Performance Trace" | 内置在 Electron 框架二进制文件中，JS 层面无法修改 |
+| 属性/变量名 | `defaultMessage`、`children`、`baseDescription` | 代码字段名，非用户可见文本 |
+
+### 反馈格式（建议）
+
+```
+位置：侧栏底部
+英文：Switch workspace
+触发：始终可见
+```
+
+或直接在 Issue 中贴上截图，标注未翻译的位置即可。
+
+AI Agent 也可以扫描 Claude Desktop 的 JS 文件，找出硬编码的英文字符串，报告给维护者或直接提交替换方案到 `LanguagePack.ps1` 中的 `$replacements` 数组。
 
 ## 常见问题
 
@@ -89,40 +137,12 @@ Claude Desktop 的 JS 中有一部分 UI 字符串绕过了 i18n 系统（如侧
 - 脚本会自动请求管理员权限，若被系统拦截请手动允许
 - WindowsApps 目录受系统保护，需要管理员权限才能写入
 
+**版本不匹配报错？**
+- 语言包针对特定 Claude Desktop 版本制作，版本不一致时会停止并提示
+- 更新 Claude Desktop 后需下载对应版本的语言包
+
 **Claude 更新后中文消失？**
 - Claude 更新会覆盖 resources 目录，需要重新运行安装脚本
-- 选项 1（完整安装）会自动处理新版 JS 的语言列表补丁
-
-**硬编码补丁丢失？**
-- Claude 更新会覆盖 JS 文件，需重新运行选项 1 或单独执行 `node patch-hardcoded-strings.js`
-
-## 已知问题：硬编码英文 UI 字符串
-
-Claude Desktop 中存在部分英文 UI 字符串无法通过本语言包翻译，具体表现为以下位置仍显示英文：
-
-| 位置 | 英文文本 | 说明 |
-|------|---------|------|
-| 侧栏新建按钮 | "New task" / "New chat" | 取决于当前模式（协作/聊天） |
-| 任务列表空状态 | "No tasks yet." / "No active tasks." | 各标签页的空列表提示 |
-| 任务标签页 | "Recents" / "Active" / "Archived" | 顶部筛选标签 |
-| 命令面板 | "New task" / "New chat" | 快捷命令描述 |
-| 错误提示 | "Try again" | 操作失败时的提示 |
-| 登录页 | "Sign in to continue" | 登录页面标题 |
-
-### 原因
-
-这些字符串硬编码在 Claude Desktop 的 JS 打包文件（`ion-dist/assets/v1/index-*.js`）中，没有走 i18n 翻译系统。虽然可以通过直接修改 JS 文件将英文替换为中文（磁盘上的文件确实会被修改），但由于 **Electron 的 V8 代码缓存机制**，应用启动时会加载之前编译好的字节码缓存，而不会重新读取修改后的 JS 源文件，因此修改无法生效。
-
-已尝试的解决方案（均无效）：
-- 清除 Electron Code Cache 目录 → 导致应用崩溃
-- 在 Claude Desktop 未运行时修改 JS 文件 → 重启后仍显示英文
-- 重启电脑后重新打开 → 仍然无效
-
-### 可能的解决方向
-
-1. **等待 Anthropic 官方支持** — 这些字符串应该通过 i18n 系统暴露翻译 key，目前它们没有 i18n key
-2. **Electron 启动参数** — 可能存在禁用 V8 代码缓存的启动参数，但会影响性能
-3. **修改 asar 包** — 使用 `@electron/asar` 工具直接修改打包后的资源，绕过文件系统缓存
 
 ## 许可
 
