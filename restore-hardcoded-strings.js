@@ -11,7 +11,7 @@ function findJsFile() {
   for (const dir of dirs) {
     const p = path.join(base, dir, 'app/resources/ion-dist/assets/v1/');
     if (fs.existsSync(p)) {
-      const files = fs.readdirSync(p).filter(f => f.startsWith('index-') && f.endsWith('.js') && !f.endsWith('.bak'));
+      const files = fs.readdirSync(p).filter(f => f.endsWith('.js') && !f.endsWith('.bak') && fs.statSync(path.join(p, f)).size < 10 * 1024 * 1024);
       if (files.length > 0) return path.join(p, files[0]);
     }
   }
