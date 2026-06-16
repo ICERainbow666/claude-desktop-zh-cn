@@ -177,10 +177,16 @@ function Patch-JsLanguage {
         return $false
     }
 
-    $exactOld = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID"]'
-    $exactNew = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID","zh-CN"]'
-    # Regex handles any variable name and optional trailing comma: VarName=["en-US",...,"xx-XX" (,)]
-    $regex = [regex]'((?:\w+)=\["en-US"(?:,"[^"]+")*),?\]'
+    # Old array format: Mz=["en-US","de-DE",...,"id-ID"]
+    $exactOldArr = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID"]'
+    $exactNewArr = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID","zh-CN"]'
+    # New object format: vX={"en-US":"en","de-DE":"de",...,"id-ID":"id"}
+    $exactOldObj = ',"id-ID":"id"}'
+    $exactNewObj = ',"id-ID":"id","zh-CN":"zh"}'
+    # Regex: object format  VarName={"en-US":"xx",...,"xx-XX":"xx"(,)}
+    $regexObj = [regex]'((?:\w+)=\{"en-US":"[^"]+"(?:,"[^"]+":")[^"]*"),?\}'
+    # Regex: old array format  VarName=["en-US",...,"xx-XX"(,)]
+    $regexArr = [regex]'((?:\w+)=\["en-US"(?:,"[^"]+")*),?\]'
 
     $patched = $false
 
@@ -196,18 +202,34 @@ function Patch-JsLanguage {
 
         Backup-File -Path $jsFile.FullName
 
-        if ($content.Contains($exactOld)) {
-            $newContent = $content.Replace($exactOld, $exactNew)
+        # Try exact matches first (fast path)
+        if ($content.Contains($exactOldArr)) {
+            $newContent = $content.Replace($exactOldArr, $exactNewArr)
             Write-Utf8File -Path $jsFile.FullName -Content $newContent
-            Write-Host "  JS补丁已应用: $($jsFile.Name)"
+            Write-Host "  JS补丁已应用(数组): $($jsFile.Name)"
+            $patched = $true
+            continue
+        }
+        if ($content.Contains($exactOldObj)) {
+            $newContent = $content.Replace($exactOldObj, $exactNewObj)
+            Write-Utf8File -Path $jsFile.FullName -Content $newContent
+            Write-Host "  JS补丁已应用(对象): $($jsFile.Name)"
             $patched = $true
             continue
         }
 
-        $newContent = $regex.Replace($content, '$1,"zh-CN"]', 1)
+        # Regex fallback: try object format first, then array format
+        $newContent = $regexObj.Replace($content, '$1,"zh-CN":"zh"}', 1)
         if ($newContent -ne $content) {
             Write-Utf8File -Path $jsFile.FullName -Content $newContent
-            Write-Host "  JS补丁已应用(正则): $($jsFile.Name)"
+            Write-Host "  JS补丁已应用(对象正则): $($jsFile.Name)"
+            $patched = $true
+            continue
+        }
+        $newContent = $regexArr.Replace($content, '$1,"zh-CN"]', 1)
+        if ($newContent -ne $content) {
+            Write-Utf8File -Path $jsFile.FullName -Content $newContent
+            Write-Host "  JS补丁已应用(数组正则): $($jsFile.Name)"
             $patched = $true
             continue
         }
@@ -230,10 +252,16 @@ function Unpatch-JsLanguage {
     }
 
     $jsFiles = Get-ChildItem -LiteralPath $assetsDir -Filter "index-*.js" -File -ErrorAction SilentlyContinue
-    $exactOld = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID","zh-CN"]'
-    $exactNew = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID"]'
-    # Regex handles any variable name and optional trailing comma around zh-CN
-    $regex = [regex]'((?:\w+)=\[(?:"[^"]+",)+)"zh-CN",?\]'
+    # Old array format
+    $exactOldArr = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID","zh-CN"]'
+    $exactNewArr = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID"]'
+    # New object format
+    $exactOldObj = ',"id-ID":"id","zh-CN":"zh"}'
+    $exactNewObj = ',"id-ID":"id"}'
+    # Regex: object format
+    $regexObj = [regex]'((?:\w+)=\{(?:"[^"]+":"[^"]+",)+)"zh-CN":"[^"]+",?\}'
+    # Regex: array format
+    $regexArr = [regex]'((?:\w+)=\[(?:"[^"]+",)+)"zh-CN",?\]'
 
     foreach ($jsFile in $jsFiles) {
         $backupPath = Join-Path $backupDir $jsFile.Name
@@ -253,17 +281,31 @@ function Unpatch-JsLanguage {
             continue
         }
 
-        if ($content.Contains($exactOld)) {
-            $newContent = $content.Replace($exactOld, $exactNew)
+        if ($content.Contains($exactOldArr)) {
+            $newContent = $content.Replace($exactOldArr, $exactNewArr)
             Write-Utf8File -Path $jsFile.FullName -Content $newContent
-            Write-Host "  语言注册已恢复: $($jsFile.Name)"
+            Write-Host "  语言注册已恢复(数组): $($jsFile.Name)"
             continue
         }
 
-        $newContent = $regex.Replace($content, '$1]', 1)
+        if ($content.Contains($exactOldObj)) {
+            $newContent = $content.Replace($exactOldObj, $exactNewObj)
+            Write-Utf8File -Path $jsFile.FullName -Content $newContent
+            Write-Host "  语言注册已恢复(对象): $($jsFile.Name)"
+            continue
+        }
+
+        $newContent = $regexObj.Replace($content, '$1}', 1)
         if ($newContent -ne $content) {
             Write-Utf8File -Path $jsFile.FullName -Content $newContent
-            Write-Host "  语言注册已恢复(正则): $($jsFile.Name)"
+            Write-Host "  语言注册已恢复(对象正则): $($jsFile.Name)"
+            continue
+        }
+
+        $newContent = $regexArr.Replace($content, '$1]', 1)
+        if ($newContent -ne $content) {
+            Write-Utf8File -Path $jsFile.FullName -Content $newContent
+            Write-Host "  语言注册已恢复(数组正则): $($jsFile.Name)"
             continue
         }
 
@@ -477,7 +519,7 @@ function Get-RequiredTranslationFiles {
     $required = @(
         [pscustomobject]@{ Name = "ion-dist"; Path = (Join-Path $packDir "ion-dist\zh-CN.json") },
         [pscustomobject]@{ Name = "desktop-shell"; Path = (Join-Path $packDir "desktop-shell\zh-CN.json") },
-        [pscustomobject]@{ Name = "statsig"; Path = (Join-Path $packDir "statsig\zh-CN.json") }
+        [pscustomobject]@{ Name = "dynamic"; Path = (Join-Path $packDir "ion-dist\dynamic\zh-CN.json") }
     )
 
     foreach ($item in $required) {
@@ -551,7 +593,7 @@ function Install-LanguagePack {
         $resolved.ResourcesPath,
         (Join-Path $resolved.ResourcesPath "ion-dist"),
         (Join-Path $resolved.ResourcesPath "ion-dist\i18n"),
-        (Join-Path $resolved.ResourcesPath "ion-dist\i18n\statsig"),
+        (Join-Path $resolved.ResourcesPath "ion-dist\i18n\dynamic"),
         (Join-Path $resolved.ResourcesPath "ion-dist\assets"),
         (Join-Path $resolved.ResourcesPath "ion-dist\assets\v1")
     )
@@ -573,7 +615,7 @@ function Install-LanguagePack {
     $targets = @(
         [pscustomobject]@{ Source = $required[0].Path; Target = (Join-Path $resolved.ResourcesPath "ion-dist\i18n\zh-CN.json") },
         [pscustomobject]@{ Source = $required[1].Path; Target = (Join-Path $resolved.ResourcesPath "zh-CN.json") },
-        [pscustomobject]@{ Source = $required[2].Path; Target = (Join-Path $resolved.ResourcesPath "ion-dist\i18n\statsig\zh-CN.json") }
+        [pscustomobject]@{ Source = $required[2].Path; Target = (Join-Path $resolved.ResourcesPath "ion-dist\i18n\dynamic\zh-CN.json") }
     )
 
     foreach ($target in $targets) {
@@ -631,7 +673,7 @@ function Uninstall-LanguagePack {
     foreach ($path in @(
             (Join-Path $resolved.ResourcesPath "ion-dist\i18n\zh-CN.json"),
             (Join-Path $resolved.ResourcesPath "zh-CN.json"),
-            (Join-Path $resolved.ResourcesPath "ion-dist\i18n\statsig\zh-CN.json")
+            (Join-Path $resolved.ResourcesPath "ion-dist\i18n\dynamic\zh-CN.json")
         )) {
         if (Test-Path -LiteralPath $path -PathType Leaf) {
             Grant-WriteAccess -Path $path
@@ -673,7 +715,7 @@ function Extract-EnglishFiles {
     $targets = @(
         [pscustomobject]@{ Name = "ion-dist"; Source = (Join-Path $resolved.ResourcesPath "ion-dist\i18n\en-US.json") },
         [pscustomobject]@{ Name = "desktop-shell"; Source = (Join-Path $resolved.ResourcesPath "en-US.json") },
-        [pscustomobject]@{ Name = "statsig"; Source = (Join-Path $resolved.ResourcesPath "ion-dist\i18n\statsig\en-US.json") }
+        [pscustomobject]@{ Name = "dynamic"; Source = (Join-Path $resolved.ResourcesPath "ion-dist\i18n\dynamic\en-US.json") }
     )
 
     Write-Host ""
