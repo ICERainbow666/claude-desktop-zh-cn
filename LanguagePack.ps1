@@ -2,6 +2,7 @@
 param(
     [switch]$Uninstall,
     [switch]$Extract,
+    [switch]$TranslationOnly,
     [switch]$NoRestart,
     [switch]$PauseAtEnd
 )
@@ -692,17 +693,24 @@ function Install-LanguagePack {
         Write-Host "  $relativeTarget"
     }
 
-    Write-Host ""
-    Write-Host "[4/6] 注册中文语言..."
-    [void](Patch-JsLanguage -ResourcesPath $resolved.ResourcesPath)
+    if ($TranslationOnly) {
+        Write-Host ""
+        Write-Host "[4/4] 更新配置..."
+        Update-Config -Locale "zh-CN"
+    }
+    else {
+        Write-Host ""
+        Write-Host "[4/6] 注册中文语言..."
+        [void](Patch-JsLanguage -ResourcesPath $resolved.ResourcesPath)
 
-    Write-Host ""
-    Write-Host "[5/6] 替换硬编码字符串..."
-    Patch-HardcodedStrings -ResourcesPath $resolved.ResourcesPath
+        Write-Host ""
+        Write-Host "[5/6] 替换硬编码字符串..."
+        Patch-HardcodedStrings -ResourcesPath $resolved.ResourcesPath
 
-    Write-Host ""
-    Write-Host "[6/6] 更新配置..."
-    Update-Config -Locale "zh-CN"
+        Write-Host ""
+        Write-Host "[6/6] 更新配置..."
+        Update-Config -Locale "zh-CN"
+    }
 
     Write-Host ""
     Write-Host "=== 语言包安装完成 ==="
@@ -826,6 +834,9 @@ if ($Uninstall) {
 }
 if ($Extract) {
     $scriptArgs += "-Extract"
+}
+if ($TranslationOnly) {
+    $scriptArgs += "-TranslationOnly"
 }
 if ($NoRestart) {
     $scriptArgs += "-NoRestart"

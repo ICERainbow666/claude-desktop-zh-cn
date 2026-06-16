@@ -12,14 +12,16 @@ echo  ============================================
 echo       Claude Desktop Chinese Language Pack
 echo  ============================================
 echo.
-echo   1. Install Language Pack
-echo   2. Uninstall Language Pack
+echo   1. Full Install (Translation + JS Patch)
+echo   2. Language Pack Only (Translation Only)
+echo   3. Uninstall Language Pack
 echo   0. Exit
 echo.
-set /p CHOICE=Select [0-2]:
+set /p CHOICE=Select [0-3]:
 
-if "%CHOICE%"=="1" goto INSTALL
-if "%CHOICE%"=="2" goto UNINSTALL
+if "%CHOICE%"=="1" goto FULL_INSTALL
+if "%CHOICE%"=="2" goto LANG_ONLY
+if "%CHOICE%"=="3" goto UNINSTALL
 if "%CHOICE%"=="0" goto EXIT
 echo Invalid choice
 pause
@@ -44,13 +46,29 @@ echo [*] Starting Claude Desktop...
 echo [*] Claude Desktop started.
 goto :eof
 
-:INSTALL
+:FULL_INSTALL
 echo.
 echo === Step 1/3: Closing Claude Desktop ===
 call :KILL_CLAUDE
 echo.
 echo === Step 2/3: Installing language pack ===
 "%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%PS_SCRIPT%" -NoRestart
+if errorlevel 1 (echo [ERROR] Failed & pause & goto MENU)
+echo.
+echo === Step 3/3: Starting Claude Desktop ===
+call :START_CLAUDE
+echo.
+echo === Done! Please set language to Chinese in Claude settings.
+timeout /t 3 /nobreak >nul
+goto MENU
+
+:LANG_ONLY
+echo.
+echo === Step 1/3: Closing Claude Desktop ===
+call :KILL_CLAUDE
+echo.
+echo === Step 2/3: Installing translation files ===
+"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%PS_SCRIPT%" -TranslationOnly -NoRestart
 if errorlevel 1 (echo [ERROR] Failed & pause & goto MENU)
 echo.
 echo === Step 3/3: Starting Claude Desktop ===
