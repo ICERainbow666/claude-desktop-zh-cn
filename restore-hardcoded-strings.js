@@ -44,6 +44,11 @@ const reversals = [
   ['defaultMessage:"新建代码会话"', 'defaultMessage:"New code session"'],
   ['defaultMessage:"返回首页"', 'defaultMessage:"Go to home"'],
   ['defaultMessage:"电话"', 'defaultMessage:"Phone call"'],
+  ['defaultMessage:"最近"', 'defaultMessage:"Recents"'],
+  ['defaultMessage:"共享"', 'defaultMessage:"Shared"'],
+  ['defaultMessage:"暂无任务。"', 'defaultMessage:"No tasks yet."'],
+  ['defaultMessage:"没有活跃任务。"', 'defaultMessage:"No active tasks."'],
+  ['defaultMessage:"没有已归档任务。"', 'defaultMessage:"No archived tasks."'],
   ['label:"新建会话"', 'label:"New session"'],
   ['label:"新对话"', 'label:"New chat"'],
   ['label:"新任务"', 'label:"New task"'],
@@ -61,6 +66,7 @@ const reversals = [
   ['code:"新建代码会话"', 'code:"New code session"'],
   ['cowork:"新任务"', 'cowork:"New task"'],
   ['chat:"新对话"', 'chat:"New chat"'],
+  ['children:"最近"', 'children:"Recents"'],
   ['newTask:{defaultMessage:"新任务"', 'newTask:{defaultMessage:"New task"'],
   ['newRoutine:{defaultMessage:"新建代码会话"', 'newRoutine:{defaultMessage:"New code session"'],
   // Global standalone strings (must be after specific patterns)
@@ -71,6 +77,11 @@ const reversals = [
   ['"新建计划任务"', '"New scheduled task"'],
   ['"返回首页"', '"Go to home"'],
   ['"电话"', '"Phone call"'],
+  ['"最近"', '"Recents"'],
+  ['"共享"', '"Shared"'],
+  ['"暂无任务。"', '"No tasks yet."'],
+  ['"没有活跃任务。"', '"No active tasks."'],
+  ['"没有已归档任务。"', '"No archived tasks."'],
   ['"重试。"', '"Try again."'],
 ];
 

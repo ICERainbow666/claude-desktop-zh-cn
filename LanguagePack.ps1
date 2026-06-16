@@ -341,12 +341,6 @@ function Patch-HardcodedStrings {
 
     # These strings bypass the i18n system and must be replaced directly in JS
     $replacements = @(
-        @{ Old = '"New code session"'; New = '"新建代码会话"' },
-        @{ Old = '"New session"'; New = '"新建会话"' },
-        @{ Old = '"New chat"'; New = '"新对话"' },
-        @{ Old = '"New task"'; New = '"新任务"' },
-        @{ Old = '"Go to home"'; New = '"返回首页"' },
-        @{ Old = '"Phone call"'; New = '"电话"' },
         @{ Old = '?"New task":"New chat"'; New = '?"新任务":"新对话"' },
         @{ Old = '||"New task"'; New = '||"新任务"' },
         @{ Old = 'baseDescription:"New chat"'; New = 'baseDescription:"新对话"' },
@@ -355,7 +349,38 @@ function Patch-HardcodedStrings {
         @{ Old = 'all:"All",active:"Active",archived:"Archived"'; New = 'all:"全部",active:"活跃",archived:"已归档"' },
         @{ Old = 'all:"No tasks yet."'; New = 'all:"暂无任务。"' },
         @{ Old = 'active:"No active tasks."'; New = 'active:"没有活跃任务。"' },
-        @{ Old = 'archived:"No archived tasks."'; New = 'archived:"没有已归档任务。"' }
+        @{ Old = 'archived:"No archived tasks."'; New = 'archived:"没有已归档任务。"' },
+        @{ Old = 'newTask:{defaultMessage:"New task"'; New = 'newTask:{defaultMessage:"新任务"' },
+        @{ Old = 'newRoutine:{defaultMessage:"New code session"'; New = 'newRoutine:{defaultMessage:"新建代码会话"' },
+        # --- Property context patterns ---
+        @{ Old = 'code:"New session"'; New = 'code:"新建会话"' },
+        @{ Old = 'code:"New code session"'; New = 'code:"新建代码会话"' },
+        @{ Old = 'cowork:"New task"'; New = 'cowork:"新任务"' },
+        @{ Old = 'chat:"New chat"'; New = 'chat:"新对话"' },
+        @{ Old = 'label:"New session"'; New = 'label:"新建会话"' },
+        @{ Old = 'label:"New chat"'; New = 'label:"新对话"' },
+        @{ Old = 'label:"New task"'; New = 'label:"新任务"' },
+        @{ Old = 'label:"New code session"'; New = 'label:"新建代码会话"' },
+        @{ Old = 'label:"Go to home"'; New = 'label:"返回首页"' },
+        @{ Old = 'label:"Phone call"'; New = 'label:"电话"' },
+        @{ Old = 'title:"New session"'; New = 'title:"新建会话"' },
+        @{ Old = 'title:"New chat"'; New = 'title:"新对话"' },
+        @{ Old = 'title:"New task"'; New = 'title:"新任务"' },
+        @{ Old = 'title:"Go to home"'; New = 'title:"返回首页"' },
+        @{ Old = 'children:"Recents"'; New = 'children:"最近"' },
+        # --- Global standalone string replacements (catches remaining defaultMessage etc.) ---
+        @{ Old = '"New code session"'; New = '"新建代码会话"' },
+        @{ Old = '"New scheduled task"'; New = '"新建计划任务"' },
+        @{ Old = '"New session"'; New = '"新建会话"' },
+        @{ Old = '"New chat"'; New = '"新对话"' },
+        @{ Old = '"New task"'; New = '"新任务"' },
+        @{ Old = '"Go to home"'; New = '"返回首页"' },
+        @{ Old = '"Phone call"'; New = '"电话"' },
+        @{ Old = '"Recents"'; New = '"最近"' },
+        @{ Old = '"Shared"'; New = '"共享"' },
+        @{ Old = '"No tasks yet."', New = '"暂无任务。"' },
+        @{ Old = '"No active tasks."', New = '"没有活跃任务。"' },
+        @{ Old = '"No archived tasks."', New = '"没有已归档任务。"' }
     )
 
     $patched = 0
@@ -418,6 +443,11 @@ function Unpatch-HardcodedStrings {
         @{ Old = 'defaultMessage:"新建代码会话"'; New = 'defaultMessage:"New code session"' },
         @{ Old = 'defaultMessage:"返回首页"'; New = 'defaultMessage:"Go to home"' },
         @{ Old = 'defaultMessage:"电话"'; New = 'defaultMessage:"Phone call"' },
+        @{ Old = 'defaultMessage:"最近"'; New = 'defaultMessage:"Recents"' },
+        @{ Old = 'defaultMessage:"共享"'; New = 'defaultMessage:"Shared"' },
+        @{ Old = 'defaultMessage:"暂无任务。"'; New = 'defaultMessage:"No tasks yet."' },
+        @{ Old = 'defaultMessage:"没有活跃任务。"'; New = 'defaultMessage:"No active tasks."' },
+        @{ Old = 'defaultMessage:"没有已归档任务。"'; New = 'defaultMessage:"No archived tasks."' },
         # --- Object property context (Node.js Phase 1 targets) ---
         @{ Old = 'label:"新建会话"'; New = 'label:"New session"' },
         @{ Old = 'label:"新对话"'; New = 'label:"New chat"' },
@@ -429,6 +459,7 @@ function Unpatch-HardcodedStrings {
         @{ Old = 'title:"新对话"'; New = 'title:"New chat"' },
         @{ Old = 'title:"新任务"'; New = 'title:"New task"' },
         @{ Old = 'title:"返回首页"'; New = 'title:"Go to home"' },
+        @{ Old = 'children:"最近"'; New = 'children:"Recents"' },
         @{ Old = 'placeholder:"新建会话"'; New = 'placeholder:"New session"' },
         @{ Old = 'placeholder:"新对话"'; New = 'placeholder:"New chat"' },
         @{ Old = 'placeholder:"新任务"'; New = 'placeholder:"New task"' },
@@ -447,6 +478,11 @@ function Unpatch-HardcodedStrings {
         @{ Old = '"新建计划任务"'; New = '"New scheduled task"' },
         @{ Old = '"返回首页"'; New = '"Go to home"' },
         @{ Old = '"电话"'; New = '"Phone call"' },
+        @{ Old = '"最近"'; New = '"Recents"' },
+        @{ Old = '"共享"'; New = '"Shared"' },
+        @{ Old = '"暂无任务。"'; New = '"No tasks yet."' },
+        @{ Old = '"没有活跃任务。"'; New = '"No active tasks."' },
+        @{ Old = '"没有已归档任务。"'; New = '"No archived tasks."' },
         @{ Old = '"重试。"'; New = '"Try again."' }
     )
 

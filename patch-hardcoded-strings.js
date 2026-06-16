@@ -68,6 +68,11 @@ const uiReplacements = {
   'Email digest': '电子邮件摘要',
   'Phone call': '电话',
   'Meeting prep': '会议准备',
+  'Recents': '最近',
+  'Shared': '共享',
+  'No tasks yet.': '暂无任务。',
+  'No active tasks.': '没有活跃任务。',
+  'No archived tasks.': '没有已归档任务。',
   'Weekly review': '周回顾',
   'Code execution and file creation': '代码执行和文件创建',
   'Files hidden in shared chats': '在共享聊天中隐藏的文件',
@@ -172,6 +177,12 @@ const directReplacements = [
   { pattern: 'shared:"You haven\'t shared any tasks yet."', replacement: 'shared:"您还没有共享任何任务。"' },
   { pattern: 'noResults:"No tasks match your search."', replacement: 'noResults:"没有匹配的任务。"' },
   { pattern: 'searchPlaceholder:"Filter tasks"', replacement: 'searchPlaceholder:"筛选任务"' },
+  // code/cowork/chat property context
+  { pattern: 'code:"New session"', replacement: 'code:"新建会话"' },
+  { pattern: 'code:"New code session"', replacement: 'code:"新建代码会话"' },
+  { pattern: 'cowork:"New task"', replacement: 'cowork:"新任务"' },
+  { pattern: 'chat:"New chat"', replacement: 'chat:"新对话"' },
+  { pattern: 'children:"Recents"', replacement: 'children:"最近"' },
 ];
 
 for (const { pattern, replacement } of directReplacements) {
