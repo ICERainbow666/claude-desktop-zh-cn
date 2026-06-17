@@ -60,7 +60,7 @@ call :START_CLAUDE
 echo.
 echo === Done! Please set language to Chinese in Claude settings.
 echo.
-echo 按任意键返回主菜单...
+echo Press any key to return to menu...
 pause >nul
 goto MENU
 
@@ -78,7 +78,7 @@ call :START_CLAUDE
 echo.
 echo === Done! Please set language to Chinese in Claude settings.
 echo.
-echo 按任意键返回主菜单...
+echo Press any key to return to menu...
 pause >nul
 goto MENU
 
@@ -96,7 +96,7 @@ call :START_CLAUDE
 echo.
 echo === Language pack uninstalled.
 echo.
-echo 按任意键返回主菜单...
+echo Press any key to return to menu...
 pause >nul
 goto MENU
 
