@@ -1,5 +1,6 @@
 ﻿[CmdletBinding()]
 param(
+    [string]$Version,
     [switch]$Uninstall,
     [switch]$Extract,
     [switch]$TranslationOnly,
@@ -780,18 +781,26 @@ function Install-LanguagePack {
     Write-Host "  Claude: $($resolved.ClaudePath)"
     Write-Host "  版本:  $($resolved.Version)"
 
-    if ($SupportedVersions -notcontains $resolved.Version) {
+    # If -Version specified, use it; otherwise use installed version
+    if ($Version) {
+        $targetVersion = $Version
+        Write-Host "  目标版本: $targetVersion (手动指定)"
+    }
+    else {
+        $targetVersion = $resolved.Version
+    }
+
+    if ($SupportedVersions -notcontains $targetVersion) {
         Write-Host ""
         Write-Host "[错误] 版本不支持!" -ForegroundColor Red
-        Write-Host "  当前版本: $($resolved.Version)" -ForegroundColor Red
+        Write-Host "  版本: $targetVersion" -ForegroundColor Red
         Write-Host "  支持的版本: $($SupportedVersions -join ', ')" -ForegroundColor Yellow
-        Write-Host "  请下载对应版本的语言包。" -ForegroundColor Yellow
         $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
         exit 1
     }
     Write-Host "  版本验证通过"
 
-    $required = Get-RequiredTranslationFiles -Version $resolved.Version
+    $required = Get-RequiredTranslationFiles -Version $targetVersion
     foreach ($item in $required) {
         if (-not (Test-Path -LiteralPath $item.Path -PathType Leaf)) {
             throw "缺少翻译文件: $($item.Path)"
@@ -1080,6 +1089,10 @@ function Extract-EnglishFiles {
 }
 
 $scriptArgs = @()
+if ($Version) {
+    $scriptArgs += "-Version"
+    $scriptArgs += "`"$Version`""
+}
 if ($Uninstall) {
     $scriptArgs += "-Uninstall"
 }
