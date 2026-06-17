@@ -2,15 +2,35 @@
 
 为 Claude Desktop (Windows) 提供简体中文界面翻译。
 
+## 支持的版本
+
+| Claude Desktop 版本 | 状态 | 备注 |
+|---------------------|------|------|
+| **1.13576.0.0** | 当前最新版 | 推荐 |
+| **1.12603.1.0** | 支持 | 旧版 |
+
+> 如果你的 Claude Desktop 版本不在列表中，请到 [Issues](https://github.com/ICERainbow666/claude-desktop-zh-cn/issues) 反馈，附上版本号。
+
 ## 安装方法
 
-双击 `ClaudeChineseLangPack.bat`，以**管理员身份**运行，按提示选择：
+双击 `ClaudeChineseLangPack.bat`，以**管理员身份**运行。
+
+**第一步：选择 Claude Desktop 版本**
 
 ```
-1. 完整安装（翻译 + JS 硬编码替换）
-2. 仅安装语言包（仅翻译文件，不修改 JS）
-3. 卸载语言包
-0. 退出
+Supported versions:
+  1. 1.13576.0.0 (latest)
+  2. 1.12603.1.0
+  0. Exit
+```
+
+**第二步：选择操作**
+
+```
+  1. Full Install (Translation + JS Patch)   ← 推荐
+  2. Language Pack Only (Translation Only)
+  3. Uninstall Language Pack
+  0. Back
 ```
 
 | 选项 | 说明 |
@@ -32,8 +52,11 @@
 ### 命令行用法（PowerShell）
 
 ```powershell
-# 完整安装（需管理员权限）
+# 完整安装（自动检测版本）
 powershell -ExecutionPolicy Bypass -File .\LanguagePack.ps1
+
+# 指定版本安装
+powershell -ExecutionPolicy Bypass -File .\LanguagePack.ps1 -Version "1.13576.0.0"
 
 # 仅安装语言包
 powershell -ExecutionPolicy Bypass -File .\LanguagePack.ps1 -TranslationOnly
@@ -44,13 +67,23 @@ powershell -ExecutionPolicy Bypass -File .\LanguagePack.ps1 -Uninstall
 
 ## 覆盖范围
 
+**v1.13576.0.0（最新）**
+
+| 模块 | 已翻译 | 未翻译 | 说明 |
+|------|--------|--------|------|
+| ion-dist | 16,224 | 276 | 主界面，剩余为品牌名/格式字符串 |
+| desktop-shell | 428 | 0 | 桌面外壳 |
+| dynamic | 46 | 0 | 动态内容，全部完成 |
+
+**v1.12603.1.0**
+
 | 模块 | 已翻译 | 未翻译 | 说明 |
 |------|--------|--------|------|
 | ion-dist | 15,892 | 264 | 主界面，剩余为品牌名/格式字符串 |
-| desktop-shell | 420 | 5 | 桌面外壳，剩余为技术缩写 |
+| desktop-shell | 420 | 5 | 桌面外壳 |
 | dynamic | 69 | 0 | 动态内容，全部完成 |
 
-**未翻译的 269 个键**均为不应翻译的内容：
+**未翻译的键**均为不应翻译的内容：
 - 品牌名：Google Play、Python、Surface、Sonnet、Claude、Anthropic、Microsoft 365 等
 - 技术术语：CI、CSV、CLI、USB、GHE 等
 - 格式字符串：`{size} KB`、`{percent}%`、`v{version}` 等
@@ -60,7 +93,7 @@ powershell -ExecutionPolicy Bypass -File .\LanguagePack.ps1 -Uninstall
 
 ### 1. 翻译 JSON 文件
 
-将 `translated-zh-CN/` 下的 3 个 JSON 文件复制到 Claude Desktop 的 `resources` 目录，Claude 的 i18n 系统通过 `fetch('/i18n/{locale}.json')` 加载翻译。
+将 `translated-zh-CN/{版本}/` 下的 3 个 JSON 文件复制到 Claude Desktop 的 `resources` 目录，Claude 的 i18n 系统通过 `fetch('/i18n/{locale}.json')` 加载翻译。
 
 ### 2. 注册 zh-CN 语言
 
@@ -73,12 +106,18 @@ Claude Desktop 的部分 UI 字符串硬编码在 JS 中，绕过了 i18n 系统
 ## 目录结构
 
 ```
-├── ClaudeChineseLangPack.bat           # 统一入口（菜单选择）
-├── LanguagePack.ps1                    # 安装/卸载主脚本
-├── translated-zh-CN/                   # 翻译文件
-│   ├── ion-dist/zh-CN.json             # 主界面
-│   ├── ion-dist/dynamic/zh-CN.json     # 动态内容
-│   └── desktop-shell/zh-CN.json        # 桌面外壳
+├── ClaudeChineseLangPack.bat           # 统一入口（先选版本再选操作）
+├── LanguagePack.ps1                    # 安装/卸载主脚本（-Version 参数指定版本）
+├── translated-zh-CN/                   # 翻译文件（按版本分目录）
+│   ├── 1.13576.0.0/                    # 最新版
+│   │   ├── ion-dist/zh-CN.json
+│   │   ├── desktop-shell/zh-CN.json
+│   │   └── dynamic/zh-CN.json
+│   ├── 1.12603.1.0/                    # 旧版
+│   │   ├── ion-dist/zh-CN.json
+│   │   ├── desktop-shell/zh-CN.json
+│   │   └── dynamic/zh-CN.json
+│   └── ion-dist/en-US.json             # 英文源文件（供参考）
 └── README.md
 ```
 
