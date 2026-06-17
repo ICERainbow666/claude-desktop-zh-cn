@@ -6,10 +6,30 @@
 
 | Claude Desktop 版本 | 状态 | 备注 |
 |---------------------|------|------|
-| **1.13576.0.0** | 当前最新版 | 推荐 |
+| **1.13576.0.0** | 当前最新版 | 推荐，大部分硬编码已移入 i18n |
 | **1.12603.1.0** | 支持 | 旧版 |
 
-> 如果你的 Claude Desktop 版本不在列表中，请到 [Issues](https://github.com/ICERainbow666/claude-desktop-zh-cn/issues) 反馈，附上版本号。
+### 如何查看你的 Claude Desktop 版本
+
+在 Claude Desktop 中，点击左上角头像 → **Settings** → 滚动到底部，版本号会显示在页面底部。
+
+或者在 PowerShell 中运行：
+
+```powershell
+Get-AppxPackage -Name Claude | Select-Object Version
+```
+
+如果你的版本不在上面的列表中，可以：
+1. 到 [Issues](https://github.com/ICERainbow666/claude-desktop-zh-cn/issues) 反馈，附上版本号
+2. 让 AI Agent（如 Claude Code）帮你扫描 JS 文件，找出硬编码字符串并提交 PR
+
+### 关于硬编码字符串
+
+Claude Desktop 的 JS 中有一些 UI 字符串绕过了 i18n 翻译系统。**随着版本更新，Anthropic 已经将大部分硬编码字符串移入了 i18n**：
+- v1.12603.1.0：20+ 个硬编码模式需要 JS 补丁替换
+- v1.13576.0.0：仅剩 2-3 个硬编码模式
+
+因此**新版本推荐使用选项 2（仅语言包）**，旧版本建议使用选项 1（完整安装）。
 
 ## 安装方法
 
