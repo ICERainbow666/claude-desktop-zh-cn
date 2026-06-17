@@ -66,7 +66,10 @@ function Write-Utf8File {
     [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
 }
 
-$ExpectedVersion = '1.12603.1.0'
+$SupportedVersions = @(
+    '1.13576.0.0',
+    '1.12603.1.0'
+)
 
 function Find-ClaudePath {
     try {
@@ -718,10 +721,19 @@ function Restart-Claude {
 }
 
 function Get-RequiredTranslationFiles {
+    param(
+        [Parameter(Mandatory = $true)][string]$Version
+    )
+
+    $versionDir = Join-Path $packDir $Version
+    if (-not (Test-Path -LiteralPath $versionDir -PathType Container)) {
+        throw "未找到版本 $Version 的翻译文件目录: $versionDir"
+    }
+
     $required = @(
-        [pscustomobject]@{ Name = "ion-dist"; Path = (Join-Path $packDir "ion-dist\zh-CN.json") },
-        [pscustomobject]@{ Name = "desktop-shell"; Path = (Join-Path $packDir "desktop-shell\zh-CN.json") },
-        [pscustomobject]@{ Name = "dynamic"; Path = (Join-Path $packDir "ion-dist\dynamic\zh-CN.json") }
+        [pscustomobject]@{ Name = "ion-dist"; Path = (Join-Path $versionDir "ion-dist\zh-CN.json") },
+        [pscustomobject]@{ Name = "desktop-shell"; Path = (Join-Path $versionDir "desktop-shell\zh-CN.json") },
+        [pscustomobject]@{ Name = "dynamic"; Path = (Join-Path $versionDir "ion-dist\dynamic\zh-CN.json") }
     )
 
     foreach ($item in $required) {
@@ -760,7 +772,7 @@ function Install-LanguagePack {
     Write-Host ""
     Write-Host "无需 Python，正在直接使用 PowerShell 安装。"
 
-    $required = Get-RequiredTranslationFiles
+    $required = Get-RequiredTranslationFiles -Version $resolved.Version
     foreach ($item in $required) {
         if (-not (Test-Path -LiteralPath $item.Path -PathType Leaf)) {
             throw "缺少翻译文件: $($item.Path)"
@@ -778,11 +790,11 @@ function Install-LanguagePack {
     Write-Host "  Claude: $($resolved.ClaudePath)"
     Write-Host "  版本:  $($resolved.Version)"
 
-    if ($resolved.Version -ne $ExpectedVersion) {
+    if ($SupportedVersions -notcontains $resolved.Version) {
         Write-Host ""
-        Write-Host "[错误] 版本不匹配!" -ForegroundColor Red
-        Write-Host "  预期版本: $ExpectedVersion" -ForegroundColor Red
+        Write-Host "[错误] 版本不支持!" -ForegroundColor Red
         Write-Host "  当前版本: $($resolved.Version)" -ForegroundColor Red
+        Write-Host "  支持的版本: $($SupportedVersions -join ', ')" -ForegroundColor Yellow
         Write-Host "  请下载对应版本的语言包。" -ForegroundColor Yellow
         $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
         exit 1
@@ -932,11 +944,11 @@ function Uninstall-LanguagePack {
     Write-Host "  Claude: $($resolved.ClaudePath)"
     Write-Host "  版本:  $($resolved.Version)"
 
-    if ($resolved.Version -ne $ExpectedVersion) {
+    if ($SupportedVersions -notcontains $resolved.Version) {
         Write-Host ""
-        Write-Host "[错误] 版本不匹配!" -ForegroundColor Red
-        Write-Host "  预期版本: $ExpectedVersion" -ForegroundColor Red
+        Write-Host "[错误] 版本不支持!" -ForegroundColor Red
         Write-Host "  当前版本: $($resolved.Version)" -ForegroundColor Red
+        Write-Host "  支持的版本: $($SupportedVersions -join ', ')" -ForegroundColor Yellow
         Write-Host "  请下载对应版本的语言包。" -ForegroundColor Yellow
         $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
         exit 1
