@@ -772,16 +772,6 @@ function Install-LanguagePack {
     Write-Host ""
     Write-Host "无需 Python，正在直接使用 PowerShell 安装。"
 
-    $required = Get-RequiredTranslationFiles -Version $resolved.Version
-    foreach ($item in $required) {
-        if (-not (Test-Path -LiteralPath $item.Path -PathType Leaf)) {
-            throw "缺少翻译文件: $($item.Path)"
-        }
-
-        $sizeKb = [math]::Floor((Get-Item -LiteralPath $item.Path).Length / 1KB)
-        Write-Host ("  {0}: OK ({1}KB)" -f $item.Name, $sizeKb)
-    }
-
     $totalSteps = if ($TranslationOnly) { 5 } else { 6 }
 
     Write-Host ""
@@ -800,6 +790,16 @@ function Install-LanguagePack {
         exit 1
     }
     Write-Host "  版本验证通过"
+
+    $required = Get-RequiredTranslationFiles -Version $resolved.Version
+    foreach ($item in $required) {
+        if (-not (Test-Path -LiteralPath $item.Path -PathType Leaf)) {
+            throw "缺少翻译文件: $($item.Path)"
+        }
+
+        $sizeKb = [math]::Floor((Get-Item -LiteralPath $item.Path).Length / 1KB)
+        Write-Host ("  {0}: OK ({1}KB)" -f $item.Name, $sizeKb)
+    }
 
     Write-Host ""
     Write-Host "[2/$totalSteps] 获取写入权限..."
