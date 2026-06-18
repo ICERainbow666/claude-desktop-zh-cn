@@ -4,13 +4,17 @@
 
 ## 支持的版本
 
-| Claude Desktop 版本 | 状态 | 备注 |
-|---------------------|------|------|
-| **1.14271.x** | 当前最新版 | 推荐 |
-| **1.13576.x** | 支持 | 大部分硬编码已移入 i18n |
-| **1.12603.x** | 支持 | 旧版 |
+脚本自动识别已安装的 Claude Desktop 版本，始终使用项目中最新的翻译文件。
 
-小版本更新（如 1.14271.0.0 → 1.14271.1.0）通常翻译内容不变，脚本会自动使用最接近的翻译版本。安装后会提示实际使用的翻译版本，如有适配问题请到 [Issues](https://github.com/ICERainbow666/claude-desktop-zh-cn/issues) 反馈。
+当前翻译文件覆盖范围：
+
+| 翻译版本 | 日期 | ion-dist | desktop-shell | dynamic |
+|---------|------|----------|---------------|---------|
+| **1.14271.0.0** | 2026-06 | 16,345 / 16,625 | 424 / 424 | 46 / 46 |
+| 1.13576.0.0 | 2026-06 | 16,224 / 16,500 | 428 / 428 | 46 / 46 |
+| 1.12603.1.0 | 2026-06 | 15,892 / 16,178 | 420 / 425 | 69 / 69 |
+
+如果你的 Claude 版本高于最新翻译版本，脚本会自动使用最近的翻译，并提示适配风险。如有问题请到 [Issues](https://github.com/ICERainbow666/claude-desktop-zh-cn/issues) 反馈。
 
 ### 如何查看你的 Claude Desktop 版本
 
@@ -75,11 +79,8 @@ Supported versions:
 ### 命令行用法（PowerShell）
 
 ```powershell
-# 完整安装（自动检测版本）
+# 完整安装（自动识别版本）
 powershell -ExecutionPolicy Bypass -File .\LanguagePack.ps1
-
-# 指定版本安装
-powershell -ExecutionPolicy Bypass -File .\LanguagePack.ps1 -Version "1.13576.0.0"
 
 # 仅安装语言包
 powershell -ExecutionPolicy Bypass -File .\LanguagePack.ps1 -TranslationOnly

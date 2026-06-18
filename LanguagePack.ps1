@@ -1,6 +1,5 @@
 ﻿[CmdletBinding()]
 param(
-    [string]$Version,
     [switch]$Uninstall,
     [switch]$Extract,
     [switch]$TranslationOnly,
@@ -66,12 +65,6 @@ function Write-Utf8File {
 
     [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
 }
-
-$SupportedVersions = @(
-    '1.14271.0.0',
-    '1.13576.0.0',
-    '1.12603.1.0'
-)
 
 function Find-ClaudePath {
     try {
@@ -724,33 +717,32 @@ function Restart-Claude {
 
 function Get-RequiredTranslationFiles {
     param(
-        [Parameter(Mandatory = $true)][string]$Version
+        [Parameter(Mandatory = $true)][string]$InstalledVersion
     )
 
-    # Try exact match first
-    $versionDir = Join-Path $packDir $Version
-    if (Test-Path -LiteralPath $versionDir -PathType Container) {
-        Write-Host "  翻译版本: $Version (精确匹配)"
-        $script:ActualTranslationVersion = $Version
+    # Always use the latest available translation version
+    $available = Get-ChildItem -LiteralPath $packDir -Directory |
+        Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } |
+        Sort-Object { [version]$_.Name } -Descending
+    $matched = $available | Select-Object -First 1
+    if (-not $matched) {
+        throw "translated-zh-CN 目录下没有找到任何版本翻译文件"
+    }
+
+    $versionDir = $matched.FullName
+    $script:ActualTranslationVersion = $matched.Name
+
+    if ($matched.Name -eq $InstalledVersion) {
+        Write-Host "  翻译版本: $($matched.Name) (精确匹配)"
         $script:VersionMismatch = $false
     }
     else {
-        # Find closest available version
-        $available = Get-ChildItem -LiteralPath $packDir -Directory |
-            Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } |
-            Sort-Object { [version]$_.Name } -Descending
-        $matched = $available | Select-Object -First 1
-        if (-not $matched) {
-            throw "translated-zh-CN 目录下没有找到任何版本翻译文件"
-        }
-        $versionDir = $matched.FullName
-        $script:ActualTranslationVersion = $matched.Name
         $script:VersionMismatch = $true
         Write-Host ""
         Write-Host "  ┌─────────────────────────────────────────────────────┐" -ForegroundColor Yellow
-        Write-Host "  │ [注意] 当前 Claude 版本: $Version" -ForegroundColor Yellow
+        Write-Host "  │ [注意] 当前 Claude 版本: $InstalledVersion" -ForegroundColor Yellow
         Write-Host "  │        实际使用翻译:   $($matched.Name)" -ForegroundColor Yellow
-        Write-Host "  │ 可能存在适配问题，如有异常请反馈 Issue" -ForegroundColor Yellow
+        Write-Host "  │ 如有适配问题请反馈: https://github.com/ICERainbow666/claude-desktop-zh-cn/issues" -ForegroundColor Yellow
         Write-Host "  └─────────────────────────────────────────────────────┘" -ForegroundColor Yellow
     }
 
@@ -804,23 +796,7 @@ function Install-LanguagePack {
     Write-Host "  Claude: $($resolved.ClaudePath)"
     Write-Host "  版本:  $($resolved.Version)"
 
-    # If -Version specified, use it; otherwise use installed version
-    if ($Version) {
-        $targetVersion = $Version
-        Write-Host "  目标版本: $targetVersion (手动指定)"
-    }
-    else {
-        $targetVersion = $resolved.Version
-    }
-
-    if ($SupportedVersions -notcontains $targetVersion) {
-        Write-Host "  [提示] 版本 $targetVersion 未在已知列表中，将尝试使用最近的翻译版本" -ForegroundColor Yellow
-    }
-    else {
-        Write-Host "  版本验证通过"
-    }
-
-    $required = Get-RequiredTranslationFiles -Version $targetVersion
+    $required = Get-RequiredTranslationFiles -InstalledVersion $resolved.Version
     foreach ($item in $required) {
         if (-not (Test-Path -LiteralPath $item.Path -PathType Leaf)) {
             throw "缺少翻译文件: $($item.Path)"
@@ -973,13 +949,6 @@ function Uninstall-LanguagePack {
     Write-Host "  Claude: $($resolved.ClaudePath)"
     Write-Host "  版本:  $($resolved.Version)"
 
-    if ($SupportedVersions -notcontains $resolved.Version) {
-        Write-Host "  [提示] 版本 $($resolved.Version) 未在已知列表中，将尝试使用最近的翻译版本" -ForegroundColor Yellow
-    }
-    else {
-        Write-Host "  版本验证通过"
-    }
-
     Write-Host ""
     Write-Host "[2/5] 删除翻译文件..."
     try {
@@ -1105,10 +1074,6 @@ function Extract-EnglishFiles {
 }
 
 $scriptArgs = @()
-if ($Version) {
-    $scriptArgs += "-Version"
-    $scriptArgs += "`"$Version`""
-}
 if ($Uninstall) {
     $scriptArgs += "-Uninstall"
 }

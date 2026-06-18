@@ -4,7 +4,6 @@ set "SCRIPT_DIR=%~dp0"
 set "PS_SCRIPT=%SCRIPT_DIR%LanguagePack.ps1"
 set "PS_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 if not exist "%PS_EXE%" set "PS_EXE=powershell.exe"
-set "VERSION="
 
 :MENU
 cls
@@ -13,45 +12,20 @@ echo  ============================================
 echo       Claude Desktop Chinese Language Pack
 echo  ============================================
 echo.
-echo   Supported versions:
-echo     1. 1.14271.x (latest)
-echo     2. 1.13576.x
-echo     3. 1.12603.x (old)
-echo     0. Exit
-echo.
-set /p VCHOICE=Select version [0-3]:
-
-if "%VCHOICE%"=="1" set "VERSION=1.14271.0.0" && goto ACTION
-if "%VCHOICE%"=="2" set "VERSION=1.13576.0.0" && goto ACTION
-if "%VCHOICE%"=="3" set "VERSION=1.12603.1.0" && goto ACTION
-if "%VCHOICE%"=="0" goto EXIT
-echo Invalid choice
-pause
-goto MENU
-
-:ACTION
-cls
-echo.
-echo  ============================================
-echo       Claude Desktop Chinese Language Pack
-echo  ============================================
-echo.
-echo   Version: %VERSION%
-echo.
 echo   1. Full Install (Translation + JS Patch)
 echo   2. Language Pack Only (Translation Only)
 echo   3. Uninstall Language Pack
-echo   0. Back
+echo   0. Exit
 echo.
 set /p CHOICE=Select [0-3]:
 
 if "%CHOICE%"=="1" goto FULL_INSTALL
 if "%CHOICE%"=="2" goto LANG_ONLY
 if "%CHOICE%"=="3" goto UNINSTALL
-if "%CHOICE%"=="0" goto MENU
+if "%CHOICE%"=="0" goto EXIT
 echo Invalid choice
 pause
-goto ACTION
+goto MENU
 
 :KILL_CLAUDE
 echo.
@@ -77,9 +51,9 @@ echo.
 echo === Step 1/3: Closing Claude Desktop ===
 call :KILL_CLAUDE
 echo.
-echo === Step 2/3: Installing language pack (v%VERSION%) ===
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%PS_SCRIPT%" -Version "%VERSION%" -NoRestart
-if errorlevel 1 (echo [ERROR] Failed & pause & goto ACTION)
+echo === Step 2/3: Installing language pack ===
+"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%PS_SCRIPT%" -NoRestart
+if errorlevel 1 (echo [ERROR] Failed & pause & goto MENU)
 echo.
 echo === Step 3/3: Starting Claude Desktop ===
 call :START_CLAUDE
@@ -88,16 +62,16 @@ echo === Done! Please set language to Chinese in Claude settings.
 echo.
 echo Press any key to return to menu...
 pause >nul
-goto ACTION
+goto MENU
 
 :LANG_ONLY
 echo.
 echo === Step 1/3: Closing Claude Desktop ===
 call :KILL_CLAUDE
 echo.
-echo === Step 2/3: Installing translation files (v%VERSION%) ===
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%PS_SCRIPT%" -Version "%VERSION%" -TranslationOnly -NoRestart
-if errorlevel 1 (echo [ERROR] Failed & pause & goto ACTION)
+echo === Step 2/3: Installing translation files ===
+"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%PS_SCRIPT%" -TranslationOnly -NoRestart
+if errorlevel 1 (echo [ERROR] Failed & pause & goto MENU)
 echo.
 echo === Step 3/3: Starting Claude Desktop ===
 call :START_CLAUDE
@@ -106,16 +80,16 @@ echo === Done! Please set language to Chinese in Claude settings.
 echo.
 echo Press any key to return to menu...
 pause >nul
-goto ACTION
+goto MENU
 
 :UNINSTALL
 echo.
 echo === Step 1/3: Closing Claude Desktop ===
 call :KILL_CLAUDE
 echo.
-echo === Step 2/3: Uninstalling language pack (v%VERSION%) ===
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%PS_SCRIPT%" -Version "%VERSION%" -Uninstall -NoRestart
-if errorlevel 1 (echo [ERROR] Failed & pause & goto ACTION)
+echo === Step 2/3: Uninstalling language pack ===
+"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%PS_SCRIPT%" -Uninstall -NoRestart
+if errorlevel 1 (echo [ERROR] Failed & pause & goto MENU)
 echo.
 echo === Step 3/3: Starting Claude Desktop ===
 call :START_CLAUDE
@@ -124,7 +98,7 @@ echo === Language pack uninstalled.
 echo.
 echo Press any key to return to menu...
 pause >nul
-goto ACTION
+goto MENU
 
 :EXIT
 endlocal
