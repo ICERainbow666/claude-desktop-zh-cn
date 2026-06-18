@@ -720,16 +720,32 @@ function Get-RequiredTranslationFiles {
         [Parameter(Mandatory = $true)][string]$InstalledVersion
     )
 
-    # Always use the latest available translation version
+    $installed = [version]$InstalledVersion
+
+    # Find all available translation versions
     $available = Get-ChildItem -LiteralPath $packDir -Directory |
         Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } |
-        Sort-Object { [version]$_.Name } -Descending
-    $matched = $available | Select-Object -First 1
-    if (-not $matched) {
+        ForEach-Object { [pscustomobject]@{ Name = $_.Name; Path = $_.FullName; Ver = [version]$_.Name } } |
+        Sort-Object Ver -Descending
+
+    if (-not $available) {
         throw "translated-zh-CN 目录下没有找到任何版本翻译文件"
     }
 
-    $versionDir = $matched.FullName
+    # 1. Exact match
+    $matched = $available | Where-Object { $_.Ver -eq $installed } | Select-Object -First 1
+
+    # 2. Closest older version (largest version <= installed)
+    if (-not $matched) {
+        $matched = $available | Where-Object { $_.Ver -lt $installed } | Select-Object -First 1
+    }
+
+    # 3. Closest newer version (smallest version > installed, fallback)
+    if (-not $matched) {
+        $matched = $available | Sort-Object Ver | Select-Object -First 1
+    }
+
+    $versionDir = $matched.Path
     $script:ActualTranslationVersion = $matched.Name
 
     if ($matched.Name -eq $InstalledVersion) {
