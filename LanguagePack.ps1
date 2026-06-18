@@ -68,7 +68,6 @@ function Write-Utf8File {
 }
 
 $SupportedVersions = @(
-    '1.13576.1.0',
     '1.13576.0.0',
     '1.12603.1.0'
 )
@@ -731,6 +730,8 @@ function Get-RequiredTranslationFiles {
     $versionDir = Join-Path $packDir $Version
     if (Test-Path -LiteralPath $versionDir -PathType Container) {
         Write-Host "  翻译版本: $Version (精确匹配)"
+        $script:ActualTranslationVersion = $Version
+        $script:VersionMismatch = $false
     }
     else {
         # Find closest available version
@@ -742,7 +743,14 @@ function Get-RequiredTranslationFiles {
             throw "translated-zh-CN 目录下没有找到任何版本翻译文件"
         }
         $versionDir = $matched.FullName
-        Write-Host "  翻译版本: $($matched.Name) (最近可用，当前 $Version)"
+        $script:ActualTranslationVersion = $matched.Name
+        $script:VersionMismatch = $true
+        Write-Host ""
+        Write-Host "  ┌─────────────────────────────────────────────────────┐" -ForegroundColor Yellow
+        Write-Host "  │ [注意] 当前 Claude 版本: $Version" -ForegroundColor Yellow
+        Write-Host "  │        实际使用翻译:   $($matched.Name)" -ForegroundColor Yellow
+        Write-Host "  │ 可能存在适配问题，如有异常请反馈 Issue" -ForegroundColor Yellow
+        Write-Host "  └─────────────────────────────────────────────────────┘" -ForegroundColor Yellow
     }
 
     $required = @(

@@ -14,16 +14,14 @@ echo       Claude Desktop Chinese Language Pack
 echo  ============================================
 echo.
 echo   Supported versions:
-echo     1. 1.13576.1.0 (latest)
-echo     2. 1.13576.0.0
-echo     3. 1.12603.1.0
+echo     1. 1.13576.x (latest)
+echo     2. 1.12603.x (old)
 echo     0. Exit
 echo.
-set /p VCHOICE=Select version [0-3]:
+set /p VCHOICE=Select version [0-2]:
 
-if "%VCHOICE%"=="1" set "VERSION=1.13576.1.0" && goto ACTION
-if "%VCHOICE%"=="2" set "VERSION=1.13576.0.0" && goto ACTION
-if "%VCHOICE%"=="3" set "VERSION=1.12603.1.0" && goto ACTION
+if "%VCHOICE%"=="1" set "VERSION=1.13576.0.0" && goto ACTION
+if "%VCHOICE%"=="2" set "VERSION=1.12603.1.0" && goto ACTION
 if "%VCHOICE%"=="0" goto EXIT
 echo Invalid choice
 pause
