@@ -68,6 +68,7 @@ function Write-Utf8File {
 }
 
 $SupportedVersions = @(
+    '1.14271.0.0',
     '1.13576.0.0',
     '1.12603.1.0'
 )
