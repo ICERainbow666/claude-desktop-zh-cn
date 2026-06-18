@@ -727,9 +727,22 @@ function Get-RequiredTranslationFiles {
         [Parameter(Mandatory = $true)][string]$Version
     )
 
+    # Try exact match first
     $versionDir = Join-Path $packDir $Version
-    if (-not (Test-Path -LiteralPath $versionDir -PathType Container)) {
-        throw "未找到版本 $Version 的翻译文件目录: $versionDir"
+    if (Test-Path -LiteralPath $versionDir -PathType Container) {
+        Write-Host "  翻译版本: $Version (精确匹配)"
+    }
+    else {
+        # Find closest available version
+        $available = Get-ChildItem -LiteralPath $packDir -Directory |
+            Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } |
+            Sort-Object { [version]$_.Name } -Descending
+        $matched = $available | Select-Object -First 1
+        if (-not $matched) {
+            throw "translated-zh-CN 目录下没有找到任何版本翻译文件"
+        }
+        $versionDir = $matched.FullName
+        Write-Host "  翻译版本: $($matched.Name) (最近可用，当前 $Version)"
     }
 
     $required = @(
@@ -792,14 +805,11 @@ function Install-LanguagePack {
     }
 
     if ($SupportedVersions -notcontains $targetVersion) {
-        Write-Host ""
-        Write-Host "[错误] 版本不支持!" -ForegroundColor Red
-        Write-Host "  版本: $targetVersion" -ForegroundColor Red
-        Write-Host "  支持的版本: $($SupportedVersions -join ', ')" -ForegroundColor Yellow
-        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
-        exit 1
+        Write-Host "  [提示] 版本 $targetVersion 未在已知列表中，将尝试使用最近的翻译版本" -ForegroundColor Yellow
     }
-    Write-Host "  版本验证通过"
+    else {
+        Write-Host "  版本验证通过"
+    }
 
     $required = Get-RequiredTranslationFiles -Version $targetVersion
     foreach ($item in $required) {
@@ -955,15 +965,11 @@ function Uninstall-LanguagePack {
     Write-Host "  版本:  $($resolved.Version)"
 
     if ($SupportedVersions -notcontains $resolved.Version) {
-        Write-Host ""
-        Write-Host "[错误] 版本不支持!" -ForegroundColor Red
-        Write-Host "  当前版本: $($resolved.Version)" -ForegroundColor Red
-        Write-Host "  支持的版本: $($SupportedVersions -join ', ')" -ForegroundColor Yellow
-        Write-Host "  请下载对应版本的语言包。" -ForegroundColor Yellow
-        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
-        exit 1
+        Write-Host "  [提示] 版本 $($resolved.Version) 未在已知列表中，将尝试使用最近的翻译版本" -ForegroundColor Yellow
     }
-    Write-Host "  版本验证通过"
+    else {
+        Write-Host "  版本验证通过"
+    }
 
     Write-Host ""
     Write-Host "[2/5] 删除翻译文件..."
