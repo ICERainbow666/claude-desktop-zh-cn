@@ -182,10 +182,10 @@ function Patch-JsLanguage {
         return $false
     }
 
-    # Old array format: Mz=["en-US","de-DE",...,"id-ID"]
-    $exactOldArr = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID"]'
-    $exactNewArr = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID","zh-CN"]'
-    # New object format: vX={"en-US":"en","de-DE":"de",...,"id-ID":"id"}
+    # Locale array format: vX=["en-US","de-DE",...,"id-ID"]
+    $exactOldArr = '["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID"]'
+    $exactNewArr = '["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID","zh-CN"]'
+    # Locale map format: vX={"en-US":"en","de-DE":"de",...,"id-ID":"id"}
     $exactOldObj = ',"id-ID":"id"}'
     $exactNewObj = ',"id-ID":"id","zh-CN":"zh"}'
     # Regex: object format  VarName={"en-US":"xx",...,"xx-XX":"xx"(,)}
@@ -201,7 +201,8 @@ function Patch-JsLanguage {
         $content = [System.IO.File]::ReadAllText($jsFile.FullName)
         # Skip files without locale data
         if (-not $content.Contains('"en-US"')) { continue }
-        if ($content.Contains('"zh-CN"')) {
+        if ($content -match '\w+=\["en-US"(?:,"[^"]+")*,"zh-CN"(?:,"[^"]+")*]' -and
+            $content -match '\w+=\{"en-US":"[^"]+"[^}]*"zh-CN":"[^"]+"[^}]*}') {
             Write-Host "  已注册: $($jsFile.Name)"
             $patched = $true
             continue
@@ -209,18 +210,21 @@ function Patch-JsLanguage {
 
         Backup-File -Path $jsFile.FullName
 
+        $filePatched = $false
+
         # Try exact matches first (fast path)
         if ($content.Contains($exactOldArr)) {
-            $newContent = $content.Replace($exactOldArr, $exactNewArr)
-            Write-Utf8File -Path $jsFile.FullName -Content $newContent
+            $content = $content.Replace($exactOldArr, $exactNewArr)
             Write-Host "  JS补丁已应用(数组): $($jsFile.Name)"
-            $patched = $true
-            continue
+            $filePatched = $true
         }
         if ($content.Contains($exactOldObj)) {
-            $newContent = $content.Replace($exactOldObj, $exactNewObj)
-            Write-Utf8File -Path $jsFile.FullName -Content $newContent
+            $content = $content.Replace($exactOldObj, $exactNewObj)
             Write-Host "  JS补丁已应用(对象): $($jsFile.Name)"
+            $filePatched = $true
+        }
+        if ($filePatched) {
+            Write-Utf8File -Path $jsFile.FullName -Content $content
             $patched = $true
             continue
         }
@@ -267,10 +271,10 @@ function Unpatch-JsLanguage {
 
     $jsFiles = Get-ChildItem -LiteralPath $assetsDir -Filter "*.js" -File -ErrorAction SilentlyContinue |
         Where-Object { $_.Length -lt 10MB }  # Skip oversized vendor files
-    # Old array format
-    $exactOldArr = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID","zh-CN"]'
-    $exactNewArr = 'Mz=["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID"]'
-    # New object format
+    # Locale array format
+    $exactOldArr = '["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID","zh-CN"]'
+    $exactNewArr = '["en-US","de-DE","fr-FR","ko-KR","ja-JP","es-419","es-ES","it-IT","hi-IN","pt-BR","id-ID"]'
+    # Locale map format
     $exactOldObj = ',"id-ID":"id","zh-CN":"zh"}'
     $exactNewObj = ',"id-ID":"id"}'
     # Regex: object format
@@ -295,17 +299,22 @@ function Unpatch-JsLanguage {
             continue
         }
 
+        $filePatched = $false
+
         if ($content.Contains($exactOldArr)) {
-            $newContent = $content.Replace($exactOldArr, $exactNewArr)
-            Write-Utf8File -Path $jsFile.FullName -Content $newContent
+            $content = $content.Replace($exactOldArr, $exactNewArr)
             Write-Host "  语言注册已恢复(数组): $($jsFile.Name)"
-            continue
+            $filePatched = $true
         }
 
         if ($content.Contains($exactOldObj)) {
-            $newContent = $content.Replace($exactOldObj, $exactNewObj)
-            Write-Utf8File -Path $jsFile.FullName -Content $newContent
+            $content = $content.Replace($exactOldObj, $exactNewObj)
             Write-Host "  语言注册已恢复(对象): $($jsFile.Name)"
+            $filePatched = $true
+        }
+
+        if ($filePatched) {
+            Write-Utf8File -Path $jsFile.FullName -Content $content
             continue
         }
 
@@ -519,16 +528,49 @@ function Unpatch-HardcodedStrings {
     }
 }
 
-function Update-Config {
+function Test-IsNewUserDataLayout {
     param(
-        [Parameter(Mandatory = $true)][string]$Locale
+        [Parameter(Mandatory = $true)][string]$Version
     )
 
-    $base = Join-Path ${env:LOCALAPPDATA} "Packages\Claude_pzs8sxrjxfjjc"
-    $configPaths = @(
-        (Join-Path $base "LocalCache\Roaming\Claude\config.json"),
-        (Join-Path $base "LocalCache\Roaming\Claude-3p\config.json")
+    return ([version]$Version -ge [version]"1.15000.0.0")
+}
+
+function Test-UseHardcodedStrings {
+    param(
+        [Parameter(Mandatory = $true)][string]$TranslationVersion
     )
+
+    return @("1.12603.1.0", "1.13576.0.0") -contains $TranslationVersion
+}
+
+function Get-ClaudeConfigPaths {
+    param(
+        [Parameter(Mandatory = $true)][string]$Version
+    )
+
+    $packageBase = Join-Path ${env:LOCALAPPDATA} "Packages\Claude_pzs8sxrjxfjjc"
+    if (Test-IsNewUserDataLayout -Version $Version) {
+        return @(
+            (Join-Path ${env:LOCALAPPDATA} "Claude-3p\config.json"),
+            (Join-Path ${env:LOCALAPPDATA} "Claude\config.json")
+        ) | Select-Object -Unique
+    }
+
+    return @(
+        (Join-Path $packageBase "LocalCache\Roaming\Claude\config.json"),
+        (Join-Path $packageBase "LocalCache\Roaming\Claude-3p\config.json"),
+        (Join-Path ${env:APPDATA} "Claude\config.json")
+    ) | Select-Object -Unique
+}
+
+function Update-Config {
+    param(
+        [Parameter(Mandatory = $true)][string]$Locale,
+        [Parameter(Mandatory = $true)][string]$Version
+    )
+
+    $configPaths = Get-ClaudeConfigPaths -Version $Version
 
     foreach ($configPath in $configPaths) {
         if (-not (Test-Path -LiteralPath $configPath -PathType Leaf)) {
@@ -552,6 +594,61 @@ function Update-Config {
         }
         catch {
             Write-Host "  [警告] 配置更新失败: $(Split-Path $configPath -Leaf) ($($_.Exception.Message))" -ForegroundColor Yellow
+        }
+    }
+}
+
+function Clear-ClaudeRuntimeCache {
+    param(
+        [Parameter(Mandatory = $true)][string]$Version
+    )
+
+    $cacheNames = @(
+        "Cache",
+        "Code Cache",
+        "GPUCache",
+        "DawnGraphiteCache",
+        "DawnWebGPUCache",
+        "Session Storage",
+        "fcache"
+    )
+
+    $packageBase = Join-Path ${env:LOCALAPPDATA} "Packages\Claude_pzs8sxrjxfjjc"
+    if (Test-IsNewUserDataLayout -Version $Version) {
+        $cacheBases = @(
+            (Join-Path ${env:LOCALAPPDATA} "Claude-3p"),
+            (Join-Path ${env:LOCALAPPDATA} "Claude")
+        ) | Select-Object -Unique
+    }
+    else {
+        $cacheBases = @(
+            (Join-Path $packageBase "LocalCache\Roaming\Claude"),
+            (Join-Path $packageBase "LocalCache\Roaming\Claude-3p")
+        ) | Select-Object -Unique
+    }
+
+    foreach ($base in $cacheBases) {
+        if (-not (Test-Path -LiteralPath $base -PathType Container)) {
+            continue
+        }
+
+        try {
+            $baseResolved = (Resolve-Path -LiteralPath $base).Path
+            foreach ($name in $cacheNames) {
+                $target = Join-Path $baseResolved $name
+                if (-not (Test-Path -LiteralPath $target)) {
+                    continue
+                }
+
+                $resolved = (Resolve-Path -LiteralPath $target).Path
+                if ($resolved -like "$baseResolved*") {
+                    Remove-Item -LiteralPath $resolved -Recurse -Force -ErrorAction SilentlyContinue
+                    Write-Host "  已清理缓存: $name"
+                }
+            }
+        }
+        catch {
+            Write-Host "  [警告] 清理缓存失败: $base ($($_.Exception.Message))" -ForegroundColor Yellow
         }
     }
 }
@@ -804,7 +901,7 @@ function Install-LanguagePack {
     Write-Host ""
     Write-Host "无需 Python，正在直接使用 PowerShell 安装。"
 
-    $totalSteps = if ($TranslationOnly) { 5 } else { 6 }
+    $totalSteps = 6
 
     Write-Host ""
     Write-Host "[1/$totalSteps] 查找 Claude Desktop..."
@@ -813,6 +910,14 @@ function Install-LanguagePack {
     Write-Host "  版本:  $($resolved.Version)"
 
     $required = Get-RequiredTranslationFiles -InstalledVersion $resolved.Version
+    $useHardcodedStrings = (-not $TranslationOnly) -and (Test-UseHardcodedStrings -TranslationVersion $script:ActualTranslationVersion)
+    if ($useHardcodedStrings) {
+        Write-Host "  硬编码补丁: 启用"
+    }
+    else {
+        Write-Host "  硬编码补丁: 跳过"
+    }
+
     foreach ($item in $required) {
         if (-not (Test-Path -LiteralPath $item.Path -PathType Leaf)) {
             throw "缺少翻译文件: $($item.Path)"
@@ -886,62 +991,43 @@ function Install-LanguagePack {
         exit 1
     }
 
-    if ($TranslationOnly) {
-        Write-Host ""
-        Write-Host "[4/$totalSteps] 注册中文语言..."
-        try {
-            [void](Patch-JsLanguage -ResourcesPath $resolved.ResourcesPath)
-        }
-        catch {
-            Write-Host "  [错误] 注册语言失败: $($_.Exception.Message)" -ForegroundColor Red
-            $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
-            exit 1
-        }
-
-        Write-Host ""
-        Write-Host "[5/$totalSteps] 更新配置..."
-        try {
-            Update-Config -Locale "zh-CN"
-        }
-        catch {
-            Write-Host "  [错误] 更新配置失败: $($_.Exception.Message)" -ForegroundColor Red
-            $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
-            exit 1
-        }
+    Write-Host ""
+    Write-Host "[4/$totalSteps] 注册中文语言..."
+    try {
+        [void](Patch-JsLanguage -ResourcesPath $resolved.ResourcesPath)
     }
-    else {
-        Write-Host ""
-        Write-Host "[4/$totalSteps] 注册中文语言..."
-        try {
-            [void](Patch-JsLanguage -ResourcesPath $resolved.ResourcesPath)
-        }
-        catch {
-            Write-Host "  [错误] 注册语言失败: $($_.Exception.Message)" -ForegroundColor Red
-            $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
-            exit 1
-        }
+    catch {
+        Write-Host "  [错误] 注册语言失败: $($_.Exception.Message)" -ForegroundColor Red
+        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+        exit 1
+    }
 
-        Write-Host ""
-        Write-Host "[5/$totalSteps] 替换硬编码字符串..."
-        try {
+    Write-Host ""
+    Write-Host "[5/$totalSteps] 处理硬编码字符串..."
+    try {
+        if ($useHardcodedStrings) {
             Patch-HardcodedStrings -ResourcesPath $resolved.ResourcesPath
         }
-        catch {
-            Write-Host "  [错误] 替换硬编码字符串失败: $($_.Exception.Message)" -ForegroundColor Red
-            $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
-            exit 1
+        else {
+            Write-Host "  当前版本不需要硬编码字符串补丁"
         }
+    }
+    catch {
+        Write-Host "  [错误] 替换硬编码字符串失败: $($_.Exception.Message)" -ForegroundColor Red
+        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+        exit 1
+    }
 
-        Write-Host ""
-        Write-Host "[6/$totalSteps] 更新配置..."
-        try {
-            Update-Config -Locale "zh-CN"
-        }
-        catch {
-            Write-Host "  [错误] 更新配置失败: $($_.Exception.Message)" -ForegroundColor Red
-            $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
-            exit 1
-        }
+    Write-Host ""
+    Write-Host "[6/$totalSteps] 更新配置..."
+    try {
+        Update-Config -Locale "zh-CN" -Version $resolved.Version
+        Clear-ClaudeRuntimeCache -Version $resolved.Version
+    }
+    catch {
+        Write-Host "  [错误] 更新配置失败: $($_.Exception.Message)" -ForegroundColor Red
+        $host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null
+        exit 1
     }
 
     Write-Host ""
@@ -964,6 +1050,14 @@ function Uninstall-LanguagePack {
     $resolved = Resolve-ClaudeResources
     Write-Host "  Claude: $($resolved.ClaudePath)"
     Write-Host "  版本:  $($resolved.Version)"
+    [void](Get-RequiredTranslationFiles -InstalledVersion $resolved.Version)
+    $useHardcodedStrings = Test-UseHardcodedStrings -TranslationVersion $script:ActualTranslationVersion
+    if ($useHardcodedStrings) {
+        Write-Host "  硬编码还原: 启用"
+    }
+    else {
+        Write-Host "  硬编码还原: 跳过"
+    }
 
     Write-Host ""
     Write-Host "[2/5] 删除翻译文件..."
@@ -1011,7 +1105,12 @@ function Uninstall-LanguagePack {
     Write-Host ""
     Write-Host "[4/5] 还原硬编码字符串..."
     try {
-        Unpatch-HardcodedStrings -ResourcesPath $resolved.ResourcesPath
+        if ($useHardcodedStrings) {
+            Unpatch-HardcodedStrings -ResourcesPath $resolved.ResourcesPath
+        }
+        else {
+            Write-Host "  当前版本不需要还原硬编码字符串"
+        }
     }
     catch {
         Write-Host "  [错误] 还原硬编码字符串失败: $($_.Exception.Message)" -ForegroundColor Red
@@ -1022,7 +1121,8 @@ function Uninstall-LanguagePack {
     Write-Host ""
     Write-Host "[5/5] 恢复配置..."
     try {
-        Update-Config -Locale "en-US"
+        Update-Config -Locale "en-US" -Version $resolved.Version
+        Clear-ClaudeRuntimeCache -Version $resolved.Version
     }
     catch {
         Write-Host "  [错误] 恢复配置失败: $($_.Exception.Message)" -ForegroundColor Red
