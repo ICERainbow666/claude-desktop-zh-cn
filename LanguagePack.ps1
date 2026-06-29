@@ -39,7 +39,7 @@ function Ensure-Administrator {
         "`"$PSCommandPath`""
     ) + $Arguments
 
-    Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList $argumentList | Out-Null
+    Start-Process -FilePath "powershell.exe" -Verb RunAs -Wait -ArgumentList $argumentList | Out-Null
     exit
 }
 
