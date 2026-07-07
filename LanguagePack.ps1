@@ -247,7 +247,7 @@ function Patch-JsLanguage {
 
         # Only warn for files that look like they should have a language list
         if ($content.Contains('"de-DE"') -and $content.Contains('"id-ID"')) {
-            Write-Host "  [警告] 未匹配到语言列表: $($jsFile.Name) (Claude 可能已更新)" -ForegroundColor Yellow
+            Write-Host "  [提示] 未匹配到语言列表: $($jsFile.Name)（正常，该文件格式不同，不影响安装）" -ForegroundColor DarkGray
         }
     }
 
@@ -846,7 +846,7 @@ function Get-RequiredTranslationFiles {
     $script:ActualTranslationVersion = $matched.Name
 
     if ($matched.Name -eq $InstalledVersion) {
-        Write-Host "  翻译版本: $($matched.Name) (精确匹配)"
+        Write-Host "  翻译版本: $($matched.Name) (精确匹配)" -ForegroundColor Green
         $script:VersionMismatch = $false
     }
     else {
