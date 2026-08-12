@@ -2,6 +2,12 @@
 
 为 Claude Desktop (Windows) 提供简体中文界面翻译。
 
+> ## ⬇️ 下载安装
+>
+> 到 [Releases 页面](https://github.com/ICERainbow666/claude-desktop-zh-cn/releases) 下载 **ClaudeChineseLangPack.exe**，双击运行即可。
+>
+> 无需安装其他依赖，EXE 内含全部翻译文件。
+
 > **关于版本更新的一点说明**
 >
 > Claude Desktop 更新频繁，我无法保证每个小版本都及时跟进。部分小版本因为个人原因没有单独制作翻译文件，但**这并不影响使用**——脚本会自动匹配最接近的翻译版本。即使翻译文件比当前 Claude 版本旧，绝大多数界面文案也都能正常显示中文，因为相邻版本之间的翻译内容变化通常很小。
@@ -60,13 +66,16 @@ Claude Desktop 的 JS 中曾有一些 UI 字符串绕过了 i18n 翻译系统。
 
 ## 安装方法
 
-### 方式一：EXE 单文件（推荐）
+### 方式一：EXE 安装包（推荐）
 
-下载 `ClaudeChineseLangPack.exe`，双击运行即可。EXE 内含全部版本的翻译文件，无需额外下载。
+到 [Releases 页面](https://github.com/ICERainbow666/claude-desktop-zh-cn/releases) 下载 `ClaudeChineseLangPack.exe`，双击运行即可。EXE 内含全部版本的翻译文件，无需额外下载。
 
-- 双击后会自动请求管理员权限（UAC 弹窗）
-- 选择「1. 安装语言包」或「2. 卸载语言包」
-- 脚本会自动关闭 Claude Desktop、执行操作、再重启
+1. 下载 **ClaudeChineseLangPack.exe**（约 10 MB）
+2. 双击运行，允许管理员权限（UAC 弹窗）
+3. 选择「1. 安装语言包」
+4. 等待安装完成，Claude Desktop 会自动关闭并重启
+
+卸载：再次运行 exe，选择「2. 卸载语言包」。
 
 ### 方式二：BAT + PowerShell 脚本
 
