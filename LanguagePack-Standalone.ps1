@@ -7,7 +7,6 @@ param(
     [switch]$PauseAtEnd
 )
 
-Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
@@ -142,8 +141,8 @@ function Find-ClaudePath {
             Select-Object -First 1
         if ($pkg -and $pkg.InstallLocation -and (Test-Path -LiteralPath $pkg.InstallLocation)) {
             return [pscustomobject]@{
-                Path = $pkg.InstallLocation
-                Version = $pkg.Version.ToString()
+                Path = [string]$pkg.InstallLocation
+                Version = [string]$pkg.Version.ToString()
             }
         }
     }
@@ -158,7 +157,10 @@ function Find-ClaudePath {
         foreach ($deployment in $deployments) {
             $candidate = Join-Path ${env:ProgramFiles} "WindowsApps\$($deployment.PSChildName)"
             if (Test-Path -LiteralPath $candidate) {
-                return $candidate
+                # Extract version from folder name: Claude_1.28929.0.0_x64__pzs8sxrjxfjjc
+                $ver = ""
+                if ($deployment.PSChildName -match "Claude_(\d+\.\d+\.\d+\.\d+)") { $ver = $Matches[1] }
+                return [pscustomobject]@{ Path = [string]$candidate; Version = [string]$ver }
             }
         }
     }
@@ -173,7 +175,9 @@ function Find-ClaudePath {
             Select-Object -First 1
 
         if ($candidate) {
-            return $candidate.FullName
+            $ver = ""
+            if ($candidate.Name -match "Claude_(\d+\.\d+\.\d+\.\d+)") { $ver = $Matches[1] }
+            return [pscustomobject]@{ Path = [string]$candidate.FullName; Version = [string]$ver }
         }
     }
 
@@ -725,12 +729,17 @@ function Start-ClaudeDetached {
     return (Start-ClaudeWithWmi -ExePath $exe)
 }
 
-function Restart-Claude {
+function Stop-ClaudeProcess {
+    Write-Host "  正在关闭 Claude Desktop..."
     try { Stop-Process -Name "claude" -Force -ErrorAction SilentlyContinue } catch {}
-    Start-Sleep -Seconds 2
-    $claudePath = Find-ClaudePath
-    if (-not $claudePath) { return }
-    if (Start-ClaudeDetached -ClaudePath $claudePath) {
+    Start-Sleep -Seconds 3
+    Write-Host "  Claude Desktop 已关闭"
+}
+
+function Restart-Claude {
+    $claudeFound = Find-ClaudePath
+    if (-not $claudeFound) { return }
+    if (Start-ClaudeDetached -ClaudePath $claudeFound.Path) {
         Start-Sleep -Seconds 3
         Write-Host "Claude Desktop 已重启"
     } else {
@@ -808,10 +817,14 @@ function Install-LanguagePack {
     Write-Host "=== Claude Desktop 中文语言包安装 ==="
     Write-Host ""
 
-    $totalSteps = 6
+    $totalSteps = 7
 
     Write-Host ""
-    Write-Host "[1/$totalSteps] 查找 Claude Desktop..."
+    Write-Host "[1/$totalSteps] 关闭 Claude Desktop..."
+    Stop-ClaudeProcess
+
+    Write-Host ""
+    Write-Host "[2/$totalSteps] 查找 Claude Desktop..."
     $resolved = Resolve-ClaudeResources
     Write-Host "  Claude: $($resolved.ClaudePath)"
     Write-Host "  版本:  $($resolved.Version)"
@@ -830,7 +843,7 @@ function Install-LanguagePack {
     }
 
     Write-Host ""
-    Write-Host "[2/$totalSteps] 获取写入权限..."
+    Write-Host "[3/$totalSteps] 获取写入权限..."
     try {
         $claudeParent = Split-Path -Parent $resolved.ClaudePath
         $appPath = Join-Path $resolved.ClaudePath "app"
@@ -864,7 +877,7 @@ function Install-LanguagePack {
     }
 
     Write-Host ""
-    Write-Host "[3/$totalSteps] 安装翻译文件..."
+    Write-Host "[4/$totalSteps] 安装翻译文件..."
     try {
         $targets = @(
             [pscustomobject]@{ Source = $required[0].Path; Target = (Join-Path $resolved.ResourcesPath "ion-dist\i18n\zh-CN.json") },
@@ -884,7 +897,7 @@ function Install-LanguagePack {
     }
 
     Write-Host ""
-    Write-Host "[4/$totalSteps] 注册中文语言..."
+    Write-Host "[5/$totalSteps] 注册中文语言..."
     try { [void](Patch-JsLanguage -ResourcesPath $resolved.ResourcesPath) }
     catch {
         Write-Host "  [错误] 注册语言失败: $($_.Exception.Message)" -ForegroundColor Red
@@ -892,7 +905,7 @@ function Install-LanguagePack {
     }
 
     Write-Host ""
-    Write-Host "[5/$totalSteps] 处理硬编码字符串..."
+    Write-Host "[6/$totalSteps] 处理硬编码字符串..."
     try {
         if ($useHardcodedStrings) { Patch-HardcodedStrings -ResourcesPath $resolved.ResourcesPath }
         else { Write-Host "  当前版本不需要硬编码字符串补丁" }
@@ -903,7 +916,7 @@ function Install-LanguagePack {
     }
 
     Write-Host ""
-    Write-Host "[6/$totalSteps] 更新配置..."
+    Write-Host "[7/$totalSteps] 更新配置..."
     try {
         Update-Config -Locale "zh-CN" -Version $resolved.Version
         Clear-ClaudeRuntimeCache -Version $resolved.Version
@@ -928,7 +941,11 @@ function Uninstall-LanguagePack {
     Write-Host "=== Claude Desktop 中文语言包卸载 ==="
     Write-Host ""
 
-    Write-Host "[1/5] 查找 Claude Desktop..."
+    Write-Host "[1/6] 关闭 Claude Desktop..."
+    Stop-ClaudeProcess
+
+    Write-Host ""
+    Write-Host "[2/6] 查找 Claude Desktop..."
     $resolved = Resolve-ClaudeResources
     Write-Host "  Claude: $($resolved.ClaudePath)"
     Write-Host "  版本:  $($resolved.Version)"
@@ -938,7 +955,7 @@ function Uninstall-LanguagePack {
     else { Write-Host "  硬编码还原: 跳过" }
 
     Write-Host ""
-    Write-Host "[2/5] 删除翻译文件..."
+    Write-Host "[3/6] 删除翻译文件..."
     try {
         $claudeParent = Split-Path -Parent $resolved.ClaudePath
         $appPath = Join-Path $resolved.ClaudePath "app"
@@ -967,7 +984,7 @@ function Uninstall-LanguagePack {
     }
 
     Write-Host ""
-    Write-Host "[3/5] 恢复语言注册..."
+    Write-Host "[4/6] 恢复语言注册..."
     try { Unpatch-JsLanguage -ResourcesPath $resolved.ResourcesPath }
     catch {
         Write-Host "  [错误] 恢复语言注册失败: $($_.Exception.Message)" -ForegroundColor Red
@@ -975,7 +992,7 @@ function Uninstall-LanguagePack {
     }
 
     Write-Host ""
-    Write-Host "[4/5] 还原硬编码字符串..."
+    Write-Host "[5/6] 还原硬编码字符串..."
     try {
         if ($useHardcodedStrings) { Unpatch-HardcodedStrings -ResourcesPath $resolved.ResourcesPath }
         else { Write-Host "  当前版本不需要还原硬编码字符串" }
@@ -986,7 +1003,7 @@ function Uninstall-LanguagePack {
     }
 
     Write-Host ""
-    Write-Host "[5/5] 恢复配置..."
+    Write-Host "[6/6] 恢复配置..."
     try {
         Update-Config -Locale "en-US" -Version $resolved.Version
         Clear-ClaudeRuntimeCache -Version $resolved.Version
