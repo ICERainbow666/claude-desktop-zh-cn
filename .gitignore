@@ -2,3 +2,4 @@
 *.bak
 extracted-en-US/
 translation-template/
+temp/

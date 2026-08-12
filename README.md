@@ -60,7 +60,17 @@ Claude Desktop 的 JS 中曾有一些 UI 字符串绕过了 i18n 翻译系统。
 
 ## 安装方法
 
-双击 `ClaudeChineseLangPack.bat`，以**管理员身份**运行。
+### 方式一：EXE 单文件（推荐）
+
+下载 `ClaudeChineseLangPack.exe`，双击运行即可。EXE 内含全部版本的翻译文件，无需额外下载。
+
+- 双击后会自动请求管理员权限（UAC 弹窗）
+- 选择「1. 安装语言包」或「2. 卸载语言包」
+- 脚本会自动关闭 Claude Desktop、执行操作、再重启
+
+### 方式二：BAT + PowerShell 脚本
+
+从仓库下载完整目录，双击 `ClaudeChineseLangPack.bat`，以**管理员身份**运行。
 
 ```
 Claude Desktop Chinese Language Pack
@@ -96,6 +106,17 @@ powershell -ExecutionPolicy Bypass -File .\LanguagePack.ps1 -TranslationOnly
 powershell -ExecutionPolicy Bypass -File .\LanguagePack.ps1 -Uninstall
 ```
 
+### 构建 EXE（开发者）
+
+翻译文件更新后，运行 `build-exe.ps1` 重新构建 EXE：
+
+```powershell
+# 需要 ps2exe 模块（脚本会自动安装）
+powershell -ExecutionPolicy Bypass -File .\build-exe.ps1
+```
+
+构建过程：读取 `translated-zh-CN/` 全部版本翻译 → zip 压缩 → base64 编码 → 注入 `LanguagePack-Standalone.ps1` → PS2EXE 编译为 `ClaudeChineseLangPack.exe`（约 10 MB，自包含全部 15 个版本的翻译）。
+
 ## 工作原理
 
 1. **翻译 JSON 文件** — 将 `translated-zh-CN/{版本}/` 下的 3 个 JSON 复制到 Claude 的 `resources` 目录，Claude 的 i18n 系统通过 `fetch('/i18n/{locale}.json')` 加载翻译。
@@ -106,8 +127,11 @@ powershell -ExecutionPolicy Bypass -File .\LanguagePack.ps1 -Uninstall
 ## 目录结构
 
 ```
-├── ClaudeChineseLangPack.bat           # 统一入口（安装/卸载）
-├── LanguagePack.ps1                    # 安装/卸载主脚本（自动匹配版本）
+├── ClaudeChineseLangPack.exe           # EXE 单文件（自包含全部翻译，推荐分发）
+├── ClaudeChineseLangPack.bat           # BAT 入口（需配合 translated-zh-CN 目录）
+├── LanguagePack.ps1                    # 安装/卸载主脚本（BAT 方式，自动匹配版本）
+├── LanguagePack-Standalone.ps1         # EXE 源脚本模板（含翻译嵌入逻辑）
+├── build-exe.ps1                       # EXE 构建脚本（打包翻译 + PS2EXE 编译）
 ├── translated-zh-CN/                   # 翻译文件（按版本分目录）
 │   ├── 1.18286.2.0/                    # 最新版
 │   │   ├── ion-dist/zh-CN.json
