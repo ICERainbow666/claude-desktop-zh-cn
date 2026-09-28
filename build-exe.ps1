@@ -36,6 +36,13 @@ if (-not $versionDirs) {
     throw "未在 translated-zh-CN/ 下找到版本目录"
 }
 
+# 只打包最近 5 个版本（本地文件夹保留全部，EXE 体积控制在合理范围）
+$KeepVersions = 5
+if ($versionDirs.Count -gt $KeepVersions) {
+    $versionDirs = $versionDirs | Select-Object -Last $KeepVersions
+    Write-Host "  [策略] 仅打包最近 $KeepVersions 个版本" -ForegroundColor DarkGray
+}
+
 $totalFiles = 0
 $totalBytes = 0
 
